@@ -1,0 +1,211 @@
+package com.backend.KKUN_Booking.service.implement;
+
+import com.backend.KKUN_Booking.dto.ReviewDto;
+import com.backend.KKUN_Booking.dto.abstractDto.RoomReviewDto;
+import com.backend.KKUN_Booking.dto.abstractDto.TouringReviewDto;
+import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
+import com.backend.KKUN_Booking.model.Booking;
+import com.backend.KKUN_Booking.model.Review;
+import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
+import com.backend.KKUN_Booking.model.reviewAbstract.TouringReview;
+import com.backend.KKUN_Booking.repository.*;
+import com.backend.KKUN_Booking.service.ReviewService;
+import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class ReviewServiceImpl implements ReviewService {
+    private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
+    private final RoomRepository roomRepository;
+    private final TouringRepository touringRepository;
+    private final BookingRepository bookingRepository;
+
+    public ReviewServiceImpl(ReviewRepository reviewRepository, UserRepository userRepository,
+                             RoomRepository roomRepository, TouringRepository touringRepository,BookingRepository bookingRepository) {
+        this.reviewRepository = reviewRepository;
+        this.userRepository = userRepository;
+        this.roomRepository = roomRepository;
+        this.touringRepository = touringRepository;
+        this.bookingRepository = bookingRepository;
+    }
+
+    @Override
+    public List<ReviewDto> getAllReviews() {
+        return reviewRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ReviewDto getReviewById(UUID id) {
+        return reviewRepository.findById(id)
+                .map(this::convertToDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+    }
+
+    @Override
+    @Transactional
+    public ReviewDto createReview(UUID bookingId, ReviewDto reviewDto) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (booking.isReviewed() || booking.getCheckoutDate().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot review this booking");
+        }
+        ReviewDto createdReview;
+        if (reviewDto instanceof RoomReviewDto) {
+            createdReview = createRoomReview((RoomReviewDto) reviewDto, booking);
+        } else if (reviewDto instanceof TouringReviewDto) {
+            createdReview = createTouringReview((TouringReviewDto) reviewDto, booking);
+        } else {
+            throw new IllegalArgumentException("Invalid review type");
+        }
+
+        // Update the booking's isReviewed status
+        booking.setReviewed(true);
+        bookingRepository.save(booking);
+
+        return createdReview;
+    }
+
+    private ReviewDto createRoomReview(RoomReviewDto roomReviewDto, Booking booking) {
+        RoomReview review = new RoomReview();
+        populateRoomReview(roomReviewDto, review);
+        review.setBooking(booking);
+        return convertToDto(reviewRepository.save(review));
+    }
+
+    private ReviewDto createTouringReview(TouringReviewDto touringReviewDto, Booking booking) {
+        TouringReview review = new TouringReview();
+        populateTouringReview(touringReviewDto, review);
+        review.setBooking(booking);
+        return convertToDto(reviewRepository.save(review));
+    }
+
+    @Override
+    public ReviewDto updateReview(UUID id, ReviewDto reviewDto) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        if (review instanceof RoomReview && reviewDto instanceof RoomReviewDto) {
+            updateRoomReview((RoomReview) review, (RoomReviewDto) reviewDto);
+        } else if (review instanceof TouringReview && reviewDto instanceof TouringReviewDto) {
+            updateTouringReview((TouringReview) review, (TouringReviewDto) reviewDto);
+        } else {
+            throw new IllegalArgumentException("Invalid review type for update");
+        }
+
+        return convertToDto(reviewRepository.save(review));
+    }
+
+    @Override
+    public void deleteReview(UUID id) {
+        reviewRepository.deleteById(id);
+    }
+
+    @Override
+    public List<ReviewDto> getReviewsByRoomId(UUID roomId) {
+        return reviewRepository.findByRoomId(roomId).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    private void populateRoomReview(RoomReviewDto roomReviewDto, RoomReview review) {
+        review.setRoom(roomRepository.findById(roomReviewDto.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found")));
+
+        populateCommonFields(roomReviewDto, review);
+
+        review.setCleanliness(roomReviewDto.getCleanliness());
+        review.setAmenities(roomReviewDto.getAmenities());
+        review.setSpace(roomReviewDto.getSpace());
+        review.setComfort(roomReviewDto.getComfort());
+        review.updateOverallRating();
+    }
+
+    private void populateTouringReview(TouringReviewDto touringReviewDto, TouringReview review) {
+        review.setTouring(touringRepository.findById(touringReviewDto.getTouringId())
+                .orElseThrow(() -> new ResourceNotFoundException("Touring not found")));
+
+        populateCommonFields(touringReviewDto, review);
+
+        review.setItinerary(touringReviewDto.getItinerary());
+        review.setAttractions(touringReviewDto.getAttractions());
+        review.setTourGuide(touringReviewDto.getTourGuide());
+        review.updateOverallRating();
+
+    }
+
+    private void populateCommonFields(ReviewDto reviewDto, Review review) {
+        review.setId(reviewDto.getId());
+        review.setOverallRating(reviewDto.getOverallRating());
+        review.setComment(reviewDto.getComment());
+        review.setDate(reviewDto.getDate());
+        review.setUser(userRepository.findById(reviewDto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found")));
+    }
+
+    private void updateRoomReview(RoomReview roomReview, RoomReviewDto roomReviewDto) {
+        roomReview.setCleanliness(roomReviewDto.getCleanliness());
+        roomReview.setAmenities(roomReviewDto.getAmenities());
+        roomReview.setSpace(roomReviewDto.getSpace());
+        roomReview.setComfort(roomReviewDto.getComfort());
+        updateCommonFields(roomReview, roomReviewDto);
+    }
+
+    private void updateTouringReview(TouringReview touringReview, TouringReviewDto touringReviewDto) {
+        touringReview.setItinerary(touringReviewDto.getItinerary());
+        touringReview.setAttractions(touringReviewDto.getAttractions());
+        touringReview.setTourGuide(touringReviewDto.getTourGuide()); // Corrected line
+        updateCommonFields(touringReview, touringReviewDto);
+    }
+
+    private void updateCommonFields(Review review, ReviewDto dto) {
+        review.setOverallRating(dto.getOverallRating());
+        review.setComment(dto.getComment());
+        review.setDate(dto.getDate());
+    }
+
+    private ReviewDto convertToDto(Review review) {
+        if (review instanceof RoomReview) {
+            return convertToRoomReviewDto((RoomReview) review);
+        } else if (review instanceof TouringReview) {
+            return convertToTouringReviewDto((TouringReview) review);
+        }
+        throw new IllegalArgumentException("Unsupported review type");
+    }
+
+    private RoomReviewDto convertToRoomReviewDto(RoomReview review) {
+        RoomReviewDto dto = new RoomReviewDto();
+        populateCommonDtoFields(dto, review);
+        dto.setRoomId(review.getRoom().getId());
+        dto.setCleanliness(review.getCleanliness());
+        dto.setAmenities(review.getAmenities());
+        dto.setSpace(review.getSpace());
+        dto.setComfort(review.getComfort());
+        return dto;
+    }
+
+    private TouringReviewDto convertToTouringReviewDto(TouringReview review) {
+        TouringReviewDto dto = new TouringReviewDto();
+        populateCommonDtoFields(dto, review);
+        dto.setTouringId(review.getTouring().getId());
+        dto.setItinerary(review.getItinerary());
+        dto.setAttractions(review.getAttractions());
+        dto.setTourGuide(review.getTourGuide());
+        return dto;
+    }
+
+    private void populateCommonDtoFields(ReviewDto dto, Review review) {
+        dto.setId(review.getId());
+        dto.setOverallRating(review.getOverallRating());
+        dto.setComment(review.getComment());
+        dto.setDate(review.getDate());
+        dto.setUserId(review.getUser().getId());
+    }
+}
