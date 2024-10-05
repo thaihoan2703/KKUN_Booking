@@ -16,6 +16,7 @@ import com.backend.KKUN_Booking.service.NotificationService;
 import com.backend.KKUN_Booking.service.PaymentService;
 import com.backend.KKUN_Booking.service.provider.PaymentProvider;
 import com.backend.KKUN_Booking.service.provider.PaymentProviderFactory;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -101,7 +102,6 @@ public class PaymentServiceImpl implements PaymentService {
         // Lưu lại trang thai thanh toán và booking
         paymentRepository.save(payment);
 
-        notificationService.sendReviewReminder(payment.getBooking().getUser(), payment.getBooking());
     }
 
 
@@ -170,11 +170,27 @@ public class PaymentServiceImpl implements PaymentService {
         UUID paymentId = paymentRepository.findByTransactionReference(response.getTransactionCode()).getId();
         if (response.getStatus() == PaymentStatus.COMPLETED) {
             paymentService.updatePaymentStatus(paymentId, PaymentStatus.COMPLETED);
+            processCheckout(paymentId);
+
         } else if (response.getStatus() == PaymentStatus.FAILED) {
             paymentService.updatePaymentStatus(paymentId, PaymentStatus.FAILED);
         }
 
         return response;
+    }
+
+    public void processCheckout(UUID paymentId){
+        try {
+            Payment payment = paymentRepository.findById(paymentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+            if (payment.getBooking().getStatus().equals(BookingStatus.CONFIRMED) && payment.getBooking().isReviewed() == false ) {
+                notificationService.sendReviewReminder(payment.getBooking().getUser(), payment.getBooking());
+            }
+
+        } catch (MessagingException e) {
+            // Xử lý ngoại lệ, có thể log lại hoặc thông báo lỗi
+            System.err.println("Error sending review reminder: " + e.getMessage());
+        }
     }
 }
 

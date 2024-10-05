@@ -1,8 +1,10 @@
 package com.backend.KKUN_Booking.controller;
 
 import com.backend.KKUN_Booking.dto.PaymentDto;
+import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +36,15 @@ public class PaymentController {
     @PutMapping("/{id}")
     public PaymentDto updatePayment(@PathVariable UUID id, @RequestBody PaymentDto paymentDto) {
         return paymentService.updatePayment(id, paymentDto);
+    }
+
+    @PutMapping("/{id}/updatePaymentSuccessStatus")
+    public ResponseEntity<String> updatePaymentSuccessStatus(@PathVariable UUID id) {
+        // Cập nhật trạng thái thanh toán thành "COMPLETED"
+        paymentService.updatePaymentStatus(id, PaymentStatus.COMPLETED);
+
+        // Trả về phản hồi thành công
+        return ResponseEntity.ok("Payment status updated successfully.");
     }
 
     @DeleteMapping("/{id}")

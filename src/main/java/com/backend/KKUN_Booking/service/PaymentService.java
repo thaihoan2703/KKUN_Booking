@@ -17,7 +17,7 @@ public interface PaymentService {
     void deletePayment(UUID id);
     List<PaymentDto> getPaymentsByBookingId(UUID bookingId);
     void updatePaymentStatus(UUID paymentId, PaymentStatus status);
-
+    void processCheckout(UUID paymentId);
     PaymentResponse.BaseResponse initiatePayment(PaymentDto paymentDto, HttpServletRequest request);
     PaymentResponse.BaseResponse processPaymentCallback(String paymentProvider, Map<String, String> callbackParams,HttpServletRequest request );
 

@@ -6,9 +6,11 @@ import com.backend.KKUN_Booking.dto.abstractDto.TouringReviewDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
 import com.backend.KKUN_Booking.model.Booking;
 import com.backend.KKUN_Booking.model.Review;
+import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.model.reviewAbstract.TouringReview;
 import com.backend.KKUN_Booking.repository.*;
+import com.backend.KKUN_Booking.service.BookingService;
 import com.backend.KKUN_Booking.service.ReviewService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -25,14 +27,16 @@ public class ReviewServiceImpl implements ReviewService {
     private final RoomRepository roomRepository;
     private final TouringRepository touringRepository;
     private final BookingRepository bookingRepository;
+    private final BookingService bookingService;
 
     public ReviewServiceImpl(ReviewRepository reviewRepository, UserRepository userRepository,
-                             RoomRepository roomRepository, TouringRepository touringRepository,BookingRepository bookingRepository) {
+                             RoomRepository roomRepository, TouringRepository touringRepository,BookingRepository bookingRepository, BookingService bookingService) {
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
         this.roomRepository = roomRepository;
         this.touringRepository = touringRepository;
         this.bookingRepository = bookingRepository;
+        this.bookingService = bookingService;
     }
 
     @Override
@@ -54,11 +58,15 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewDto createReview(UUID bookingId, ReviewDto reviewDto) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        if (booking.isReviewed() || booking.getCheckoutDate().isAfter(LocalDateTime.now())) {
-            throw new IllegalStateException("Cannot review this booking");
+        if (booking.getUser().getId() != reviewDto.getUserId()) {
+            throw new IllegalStateException(" You did not booked this booking!");
+        }
+        if (booking.isReviewed() && booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("Cannot review this booking. This booking has already been reviewed !");
         }
         ReviewDto createdReview;
         if (reviewDto instanceof RoomReviewDto) {
+
             createdReview = createRoomReview((RoomReviewDto) reviewDto, booking);
         } else if (reviewDto instanceof TouringReviewDto) {
             createdReview = createTouringReview((TouringReviewDto) reviewDto, booking);
@@ -66,15 +74,13 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalArgumentException("Invalid review type");
         }
 
-        // Update the booking's isReviewed status
-        booking.setReviewed(true);
-        bookingRepository.save(booking);
-
+        bookingService.markBookingAsReviewed(bookingId);
         return createdReview;
     }
 
     private ReviewDto createRoomReview(RoomReviewDto roomReviewDto, Booking booking) {
         RoomReview review = new RoomReview();
+        roomReviewDto.setRoomId(booking.getRoom().getId());
         populateRoomReview(roomReviewDto, review);
         review.setBooking(booking);
         return convertToDto(reviewRepository.save(review));

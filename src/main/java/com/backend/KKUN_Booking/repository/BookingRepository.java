@@ -18,13 +18,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByRoom_Hotel_Id(UUID hotelId);
     List<Booking> findByStatus(String status);
 
-
-    @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId AND " +
-            "((b.checkinDate <= :checkoutDate AND b.checkoutDate >= :checkinDate))")
-    List<Booking> findOverlappingBookings(@Param("roomId") UUID roomId,
-                                          @Param("checkinDate") LocalDateTime checkinDate,
-                                          @Param("checkoutDate") LocalDateTime checkoutDate);
-
     @Query("SELECT b FROM Booking b WHERE b.room = :room AND " +
             "((b.checkinDate <= :checkoutDate AND b.checkoutDate >= :checkinDate) OR " +
             "(b.checkinDate >= :checkinDate AND b.checkinDate < :checkoutDate))")
