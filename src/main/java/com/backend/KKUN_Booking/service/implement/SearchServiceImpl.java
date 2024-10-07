@@ -47,14 +47,14 @@ public class SearchServiceImpl implements SearchService {
                             .anyMatch(room -> room.getCapacity() >= guests);
 
                     if (!availableRooms.isEmpty() && canAccommodateGuests) {
-//                        List<NearbyPlaceDto> nearbyPlaces = getNearbyPlaces(hotel);
+                        List<NearbyPlaceDto> nearbyPlaces = getNearbyPlaces(hotel);
                         return new HotelSearchResultDto(
                                 hotel.getId(),
                                 hotel.getName(),
                                 lowestPrice,
                                 availableRooms.size(),
-                                calculatePopularityScore(hotel)
-
+                                calculatePopularityScore(hotel),
+                                nearbyPlaces
                         );
                     } else {
                         return null;

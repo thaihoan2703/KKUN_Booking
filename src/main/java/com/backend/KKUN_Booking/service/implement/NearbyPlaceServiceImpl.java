@@ -1,11 +1,14 @@
-package com.backend.KKUN_Booking.service;
+package com.backend.KKUN_Booking.service.implement;
 
 import com.backend.KKUN_Booking.dto.NearbyPlaceDto;
 import com.backend.KKUN_Booking.response.NearbyPlaceResultResponseContainer;
+import com.backend.KKUN_Booking.service.NearbyPlaceService;
 import com.backend.KKUN_Booking.util.LocationUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,8 +20,11 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
 
     @Autowired
     private RestTemplate restTemplate;
+    @Value("${OPENCAGE_API_KEY}")
+    private String apiKey;
+    @Value("${OPENCAGE_BASE_URL}")
+    private String baseUrl;
 
-    private static final String NOMINATIM_API = "https://nominatim.openstreetmap.org";
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -35,24 +41,40 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         return findNearbyNotablePlaces(coordinates[0], coordinates[1]);
     }
 
+//    private double[] geocodeAddress(String address) {
+//        String url = NOMINATIM_API + "/search?format=json&q=" + address;
+//        try {
+//            String result = restTemplate.getForObject(url, String.class);
+//            JsonNode jsonNode = objectMapper.readTree(result);
+//            if (jsonNode.isArray() && jsonNode.size() > 0) {
+//                JsonNode firstResult = jsonNode.get(0);
+//                return new double[]{firstResult.get("lat").asDouble(), firstResult.get("lon").asDouble()};
+//            }
+//        } catch (IOException e) {
+//            throw new RuntimeException("Error parsing geocoding result: " + e.getMessage());
+//        }
+//        throw new RuntimeException("Address not found");
+//    }
     private double[] geocodeAddress(String address) {
-        String url = NOMINATIM_API + "/search?format=json&q=" + address;
+        // Load the environment variables from .env file
+
+        String url = baseUrl + "/geocode/v1/json?q=" + address + "&key=" + apiKey;
+
         try {
             String result = restTemplate.getForObject(url, String.class);
             JsonNode jsonNode = objectMapper.readTree(result);
-            if (jsonNode.isArray() && jsonNode.size() > 0) {
-                JsonNode firstResult = jsonNode.get(0);
-                return new double[]{firstResult.get("lat").asDouble(), firstResult.get("lon").asDouble()};
+            if (jsonNode.has("results") && jsonNode.get("results").size() > 0) {
+                JsonNode firstResult = jsonNode.get("results").get(0).get("geometry");
+                return new double[]{firstResult.get("lat").asDouble(), firstResult.get("lng").asDouble()};
             }
         } catch (IOException e) {
             throw new RuntimeException("Error parsing geocoding result: " + e.getMessage());
         }
         throw new RuntimeException("Address not found");
     }
-
     private List<NearbyPlaceDto> findNearbyNotablePlaces(double lat, double lon) {
         String query = String.format(
-                "[out:json];(node(around:10000,%f,%f)[amenity~'museum|tourism|historic|bar|playground|hospital|cinema|gym|marketplace'];);out;",
+                "[out:json];(node(around:10000,%f,%f)[amenity~'museum|tourism|historic|bar|playground|hospital|cinema|gym|marketplace|supermarket|bus_station|train_station|parking|pub|theatre|parking|bakery|fast_food|nightclub|zoo|aquarium'];);out;",
                 lat, lon
         );
         String url = "http://overpass-api.de/api/interpreter?data=" + query;
@@ -81,10 +103,13 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
 
         // Sort places by specified tags and distance
         tempPlaces.sort((place1, place2) -> {
+            // Check for tags in tagsToSortBy and compare
             for (String tagName : tagsToSortBy) {
                 int comparison = compareTags(place1.getTags(), place2.getTags(), tagName);
                 if (comparison != 0) return comparison;
             }
+
+            // If neither place has any tag in tagsToSortBy, they will be compared by distance
             return Double.compare(place1.getDistanceInKm(), place2.getDistanceInKm());
         });
 
@@ -102,6 +127,22 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         return nearbyPlaces;
     }
 
+    private int compareTags(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse.Tags tags1, NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse.Tags tags2, String tagName) {
+        String value1 = getTagValue(tags1, tagName);
+        String value2 = getTagValue(tags2, tagName);
+
+        // If both values are present, compare them
+        if (value1 != null && value2 != null) {
+            return value1.compareTo(value2);
+        }
+        // If only one value is present, give it higher priority
+        if (value1 != null) return -1;
+        if (value2 != null) return 1;
+
+        // If neither tag is present, return 0 so distance comparison will follow
+        return 0;
+    }
+
     private void processPlace(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse place, double originLat, double originLon, List<NearbyPlaceDto> tempPlaces) {
         double distance = LocationUtil.calculateDistance(originLat, originLon, place.lat, place.lon);
         if (distance > 10) return; // Only process places within 10 km
@@ -116,11 +157,6 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         }
     }
 
-    private int compareTags(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse.Tags tags1, NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse.Tags tags2, String tagName) {
-        String value1 = getTagValue(tags1, tagName);
-        String value2 = getTagValue(tags2, tagName);
-        return value1 != null ? (value2 != null ? value1.compareTo(value2) : -1) : (value2 != null ? 1 : 0);
-    }
 
     private String getTagValue(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse.Tags tags, String tagName) {
         switch (tagName) {
@@ -137,52 +173,46 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         if (place.tags == null || place.tags.amenity == null) return null;
 
         switch (place.tags.amenity) {
-            case "museum":
-                return "Museum";
-            case "tourism":
-                return "Tourism";
-            case "historic":
-                return "Historic Site";
-            case "cafe":
-                return "Cafe";
-            case "bar":
-                return "Bar";
-            case "playground":
-                return "Playground";
-            case "hospital":
-                return "Hospital";
-            case "restaurant":
-                return "Restaurant";
-            case "school":
-                return "School";
-            case "pharmacy":
-                return "Pharmacy";
-            case "supermarket":
-                return "Supermarket";
-            case "bank":
-                return "Bank";
-            case "bus_station":
-                return "Bus Station";
-            case "train_station":
-                return "Train Station";
-            case "toilets":
-                return "Public Toilet";
-            case "parking":
-                return "Parking Lot";
-            case "post_office":
-                return "Post Office";
-            case "cinema":
-                return "Cinema";
-            case "hotel":
-                return "Hotel";
-            case "library":
-                return "Library";
-            case "gym":
-                return "Gym";
-            case "marketplace":
-                return "Marketplace";
-            default:
-                return null;
+            case "museum": return "Museum";
+            case "tourism": return "Tourism";
+            case "historic": return "Historic Site";
+            case "cafe": return "Cafe";
+            case "bar": return "Bar";
+            case "playground": return "Playground";
+            case "hospital": return "Hospital";
+            case "restaurant": return "Restaurant";
+            case "school": return "School";
+            case "pharmacy": return "Pharmacy";
+            case "supermarket": return "Supermarket";
+            case "bank": return "Bank";
+            case "bus_station": return "Bus Station";
+            case "train_station": return "Train Station";
+            case "toilets": return "Public Toilet";
+            case "parking": return "Parking Lot";
+            case "post_office": return "Post Office";
+            case "cinema": return "Cinema";
+            case "hotel": return "Hotel";
+            case "library": return "Library";
+            case "gym": return "Gym";
+            case "marketplace": return "Marketplace";
+            case "atm": return "ATM";
+            case "bicycle_rental": return "Bicycle Rental";
+            case "car_rental": return "Car Rental";
+            case "embassy": return "Embassy";
+            case "fire_station": return "Fire Station";
+            case "police": return "Police Station";
+            case "zoo": return "Zoo";
+            case "aquarium": return "Aquarium";
+            case "theatre": return "Theatre";
+            case "kindergarten": return "Kindergarten";
+            case "college": return "College";
+            case "university": return "University";
+            case "nightclub": return "Nightclub";
+            case "spa": return "Spa";
+            case "veterinary": return "Veterinary Clinic";
+            case "community_centre": return "Community Centre";
+            default: return null;
         }
     }
+
 }

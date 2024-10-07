@@ -16,5 +16,5 @@ public class HotelSearchResultDto {
     private double lowestPrice;
     private int availableRooms;
     private double popularityScore;
-//    private List<NearbyPlaceDto> nearbyPlaces;
+    private List<NearbyPlaceDto> nearbyPlaces;
 }
