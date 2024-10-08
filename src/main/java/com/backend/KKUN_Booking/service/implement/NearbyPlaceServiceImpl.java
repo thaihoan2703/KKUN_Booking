@@ -73,23 +73,30 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         throw new RuntimeException("Address not found");
     }
     private List<NearbyPlaceDto> findNearbyNotablePlaces(double lat, double lon) {
+        // Tạo truy vấn với lat và lon từ tham số truyền vào
         String query = String.format(
-                "[out:json];(node(around:10000,%f,%f)[amenity~'museum|tourism|historic|bar|playground|hospital|cinema|gym|marketplace|supermarket|bus_station|train_station|parking|pub|theatre|parking|bakery|fast_food|nightclub|zoo|aquarium'];);out;",
+                "[out:json];(node(around:10000,%f,%f)[amenity];);out;",
                 lat, lon
         );
+
+        // URL Overpass API
         String url = "http://overpass-api.de/api/interpreter?data=" + query;
+
+        // Gửi yêu cầu GET và nhận phản hồi
         NearbyPlaceResultResponseContainer response = restTemplate.getForObject(url, NearbyPlaceResultResponseContainer.class);
 
+        // Kiểm tra phản hồi
         if (response == null || response.elements == null) {
-            return Collections.emptyList(); // Return empty list if no valid response
+            return Collections.emptyList(); // Trả về danh sách rỗng nếu không có phản hồi hợp lệ
         }
 
         List<NearbyPlaceDto> nearbyPlaces = new ArrayList<>();
         List<NearbyPlaceDto> tempPlaces = new ArrayList<>();
 
+        // Xử lý từng kết quả
         for (NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse result : response.elements) {
             if (result.tags == null || result.tags.amenity == null || result.tags.name == null) {
-                continue; // Skip if no name or amenity
+                continue; // Bỏ qua nếu không có tên hoặc amenity
             }
             processPlace(result, lat, lon, tempPlaces);
         }
@@ -99,7 +106,7 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
 
     private List<NearbyPlaceDto> filterAndSortPlaces(List<NearbyPlaceDto> tempPlaces) {
         // Define priority tags for sorting
-        List<String> tagsToSortBy = Arrays.asList("tourism", "cuisine");
+        List<String> tagsToSortBy = Arrays.asList("tourism");
 
         // Sort places by specified tags and distance
         tempPlaces.sort((place1, place2) -> {
@@ -176,41 +183,43 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
             case "museum": return "Museum";
             case "tourism": return "Tourism";
             case "historic": return "Historic Site";
-            case "cafe": return "Cafe";
+//            case "cafe": return "Cafe";
             case "bar": return "Bar";
             case "playground": return "Playground";
             case "hospital": return "Hospital";
             case "restaurant": return "Restaurant";
-            case "school": return "School";
-            case "pharmacy": return "Pharmacy";
+//            case "school": return "School";
+//            case "pharmacy": return "Pharmacy";
             case "supermarket": return "Supermarket";
-            case "bank": return "Bank";
-            case "bus_station": return "Bus Station";
+//            case "bank": return "Bank";
+//            case "bus_station": return "Bus Station";
             case "train_station": return "Train Station";
-            case "toilets": return "Public Toilet";
+//            case "toilets": return "Public Toilet";
             case "parking": return "Parking Lot";
-            case "post_office": return "Post Office";
+//            case "post_office": return "Post Office";
             case "cinema": return "Cinema";
-            case "hotel": return "Hotel";
-            case "library": return "Library";
+//            case "hotel": return "Hotel";
+//            case "library": return "Library";
             case "gym": return "Gym";
             case "marketplace": return "Marketplace";
-            case "atm": return "ATM";
+//            case "atm": return "ATM";
             case "bicycle_rental": return "Bicycle Rental";
             case "car_rental": return "Car Rental";
-            case "embassy": return "Embassy";
-            case "fire_station": return "Fire Station";
-            case "police": return "Police Station";
+//            case "embassy": return "Embassy";
+//            case "fire_station": return "Fire Station";
+            case "fast_food": return "Fast food";
+//            case "police": return "Police Station";
             case "zoo": return "Zoo";
             case "aquarium": return "Aquarium";
             case "theatre": return "Theatre";
             case "kindergarten": return "Kindergarten";
-            case "college": return "College";
-            case "university": return "University";
+//            case "college": return "College";
+//            case "university": return "University";
             case "nightclub": return "Nightclub";
             case "spa": return "Spa";
             case "veterinary": return "Veterinary Clinic";
             case "community_centre": return "Community Centre";
+            case "place_of_worship": return "Worship";
             default: return null;
         }
     }

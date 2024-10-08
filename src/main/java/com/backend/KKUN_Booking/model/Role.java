@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

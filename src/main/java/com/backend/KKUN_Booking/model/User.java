@@ -1,5 +1,8 @@
 package com.backend.KKUN_Booking.model;
+
+import com.backend.KKUN_Booking.model.enumModel.AuthProvider;
 import com.backend.KKUN_Booking.model.enumModel.UserStatus;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,8 +18,9 @@ import java.util.UUID;
 @Entity
 @Getter
 @Setter
-@Table(name = "users")  // Đổi tên bảng thành "users"
-public class User implements UserDetails {
+@Inheritance(strategy = InheritanceType.JOINED)
+@Table(name = "users")
+public abstract class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -24,24 +28,33 @@ public class User implements UserDetails {
     private String firstName;
     private String lastName;
     private String email;
-    private String password;
     private String alias;
-
-    @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
 
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
-    @OneToOne(mappedBy = "owner")
-    private Hotel hotel;
-
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @OneToMany(mappedBy = "user")
-    private List<Booking> bookings;
+    private String authProvider;
+
+    @ElementCollection
+    private List<String> preferredDestinations;
+
+    @ElementCollection
+    private List<String> preferredAmenities;
+
+    private String travelStyle;
+
+    @ElementCollection
+    private List<String> recentSearches;
+
+    @ElementCollection
+    private List<String> savedHotels;
+
+    private String password;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -50,16 +63,31 @@ public class User implements UserDetails {
 
     @Override
     public String getPassword() {
-        return password;
+        return this.password;
     }
+
     @Override
     public String getUsername() {
-        return email;
+        return this.email;
     }
 
-    // Getters and Setters
+    @Override
+    public boolean isAccountNonExpired() {
+        return this.status != UserStatus.EXPIRED;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return this.status != UserStatus.LOCKED;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.status == UserStatus.ACTIVE;
+    }
 }
-
-
-
-

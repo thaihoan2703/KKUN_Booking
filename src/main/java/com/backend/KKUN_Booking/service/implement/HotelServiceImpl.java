@@ -111,6 +111,28 @@ public class HotelServiceImpl implements HotelService {
         hotelRepository.deleteById(id);
     }
 
+    @Override
+    public List<HotelDto> findTopHotelsByRating(int limit) {
+        // Fetch top hotels by rating
+        List<Hotel> hotels = hotelRepository.findTopHotelsByRating(limit);
+
+        // Map to HotelDto and return
+        return hotels.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<HotelDto> findTrendingDestinations(int limit) {
+        // Fetch trending destinations
+        List<Hotel> hotels = hotelRepository.findTrendingDestinations(limit);
+
+        // Map to HotelDto and return
+        return hotels.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
     private HotelDto convertToDto(Hotel hotel) {
         HotelDto hotelDto = new HotelDto();
         hotelDto.setId(hotel.getId());
@@ -196,4 +218,6 @@ public class HotelServiceImpl implements HotelService {
         room.setAvailable(roomDto.isAvailable());
         return room;
     }
+
+
 }

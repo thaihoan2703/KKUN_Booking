@@ -42,10 +42,10 @@ public class WebSecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/", "/api/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/", "/api/**", "/api/auth/**","/api/auth/login").permitAll()
                         .requestMatchers("/admin/**",  "/api/roles/**").hasAnyAuthority(RoleUser.ADMIN.name())
                         .requestMatchers("/api/hotels**", "/api/rooms/**","/api/payments/**","/api/amenities/**").hasAuthority(RoleUser.HOTELOWNER.name())
-                        .requestMatchers("/api/wishlist/**","/api/bookings/**").hasAuthority(RoleUser.USER.name())
+                        .requestMatchers("/api/wishlist/**","/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
                         .requestMatchers("/@**/settings").authenticated()
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception

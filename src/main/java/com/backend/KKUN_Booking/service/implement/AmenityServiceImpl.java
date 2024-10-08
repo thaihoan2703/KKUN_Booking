@@ -26,7 +26,13 @@ public class AmenityServiceImpl implements AmenityService {
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-
+    @Override
+    public List<String> getAmenitiesByIds(List<UUID> amenityIds) {
+        return amenityRepository.findAllById(amenityIds)
+                .stream()
+                .map(Amenity::getName) // Assuming Amenity class has a getName method
+                .collect(Collectors.toList());
+    }
     @Override
     public AmenityDto getAmenityById(UUID id) {
         return amenityRepository.findById(id)

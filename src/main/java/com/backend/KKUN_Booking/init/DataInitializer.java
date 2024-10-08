@@ -25,8 +25,8 @@ public class DataInitializer implements CommandLineRunner {
             adminRole.setDescription("Administrator role with full access.");
 
             Role userRole = new Role();
-            userRole.setName(RoleUser.USER.name());
-            userRole.setDescription("Regular user role.");
+            userRole.setName(RoleUser.CUSTOMER.name());
+            userRole.setDescription("Regular customer role.");
 
             Role hotelOwnerRole = new Role();
             hotelOwnerRole.setName(RoleUser.HOTELOWNER.name());

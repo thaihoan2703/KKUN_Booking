@@ -13,4 +13,11 @@ public interface UserService {
     void deleteUser(UUID id);
 
     void saveOauthUser(String email);
+
+    void addRecentSearch(UUID userId, String searchTerm);
+    void saveSaveHotel(UUID userId, UUID hotelId);
+
+    void removeSavedHotel(UUID userId, UUID hotelId);
+    List<String> getRecentSearches(UUID userId);
+    List<String> getSavedHotels(UUID userId);
 }

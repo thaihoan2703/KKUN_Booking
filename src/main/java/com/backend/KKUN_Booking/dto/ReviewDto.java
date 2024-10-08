@@ -1,8 +1,8 @@
 package com.backend.KKUN_Booking.dto;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.backend.KKUN_Booking.dto.abstractDto.RoomReviewDto;
-import com.backend.KKUN_Booking.dto.abstractDto.TouringReviewDto;
+import com.backend.KKUN_Booking.dto.abstractDto.ReviewAbstract.RoomReviewDto;
+import com.backend.KKUN_Booking.dto.abstractDto.ReviewAbstract.TouringReviewDto;
 import lombok.Getter;
 import lombok.Setter;
 
