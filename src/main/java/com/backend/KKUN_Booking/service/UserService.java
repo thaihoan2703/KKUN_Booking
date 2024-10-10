@@ -8,6 +8,7 @@ import java.util.UUID;
 public interface UserService {
     List<UserDto> getAllUsers();
     UserDto getUserById(UUID id);
+    UserDto getUserByEmail(String email);
     UserDto createUser(UserDto userDto);
     UserDto updateUser(UUID id, UserDto userDto);
     void deleteUser(UUID id);

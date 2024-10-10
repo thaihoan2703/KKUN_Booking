@@ -46,10 +46,11 @@ public class RecommendationServiceImpl implements RecommendationService {
             hotelScores.put(hotel, score);
         }
 
+        // Sort the hotels by their score in descending order
         return hotelScores.entrySet().stream()
-                .sorted(Map.Entry.<HotelDto, Double>comparingByValue().reversed())
-                .limit(10)
-                .map(Map.Entry::getKey)
+                .sorted((entry1, entry2) -> Double.compare(entry2.getValue(), entry1.getValue())) // Sort descending by value
+                .limit(10) // Limit to the top 10
+                .map(Map.Entry::getKey) // Map the result back to HotelDto
                 .collect(Collectors.toList());
     }
 
@@ -57,7 +58,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         double score = 0.0;
 
         // Check preferred destinations
-        if (user.getPreferredDestinations().contains(hotelDto.getLocation())) {
+        if (user.getPreferredDestinations().stream()
+                .anyMatch(destination -> hotelDto.getLocation().toLowerCase().contains(destination.toLowerCase()) ||
+                        destination.toLowerCase().contains(hotelDto.getLocation().toLowerCase()))) {
             score += 2.0;
         }
 

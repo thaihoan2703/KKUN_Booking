@@ -54,15 +54,26 @@ public class Hotel {
             return;
         }
 
-        // Calculate the average rating based on room reviews, filtering out null ratings
-        double averageRating = rooms.stream()
-                .map(Room::getAverageRating) // Get the average rating of each room
-                .filter(rating -> rating != null) // Filter out null ratings
-                .mapToDouble(Double::doubleValue) // Convert to double stream
-                .average() // Calculate the average of those ratings
-                .orElse(0.0); // Default to 0 if no valid ratings exist
+        // Collect all valid reviews from all rooms
+        List<Double> allRatings = rooms.stream()
+                .flatMap(room -> room.getReviews().stream())  // Get all reviews from each room
+                .map(Review::getOverallRating)  // Extract the rating from each review
+                .filter(rating -> rating != null)  // Filter out null ratings
+                .toList();  // Collect into a list
 
-        this.rating = averageRating; // Set the hotel rating to the calculated average
+        // If there are no valid ratings, set the rating to 0
+        if (allRatings.isEmpty()) {
+            this.rating = 0.0;
+            return;
+        }
+
+        // Calculate the average rating based on all review ratings
+        double averageRating = allRatings.stream()
+                .mapToDouble(Double::doubleValue)  // Convert to double stream
+                .average()  // Calculate the average rating
+                .orElse(0.0);  // Default to 0 if no ratings exist
+
+        this.rating = averageRating;  // Update the hotel's rating to the calculated average
     }
     // Getters and Setters
 }
