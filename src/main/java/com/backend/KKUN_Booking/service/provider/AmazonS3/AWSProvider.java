@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 public class AWSProvider {
 
     private String bucket;
+    private String bucketUrl;
 
     public String getBucket() {
         return bucket;
@@ -16,5 +17,14 @@ public class AWSProvider {
 
     public void setBucket(String bucket) {
         this.bucket = bucket;
+    }
+
+    // Thêm getter và setter cho bucketUrl
+    public String getBucketUrl() {
+        return bucketUrl;
+    }
+
+    public void setBucketUrl(String bucketUrl) {
+        this.bucketUrl = bucketUrl;
     }
 }

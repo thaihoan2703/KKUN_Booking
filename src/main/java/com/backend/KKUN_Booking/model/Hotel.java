@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.model;
 
+import com.backend.KKUN_Booking.converter.StringListConverter;
 import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -26,11 +27,14 @@ public class Hotel {
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
-    @ElementCollection
-    private List<String> exteriorImages;
 
-    @ElementCollection
-    private List<String> roomImages;
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "exterior_images", columnDefinition = "TEXT") // Lưu dưới dạng TEXT
+    private List<String> exteriorImages = new ArrayList<>(); // Khởi tạo danh sách
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "room_images", columnDefinition = "TEXT") // Lưu dưới dạng TEXT
+    private List<String> roomImages = new ArrayList<>(); // Khởi tạo danh sách
 
 
     private PaymentPolicy paymentPolicy; // "ONLINE" or "CHECKOUT"
