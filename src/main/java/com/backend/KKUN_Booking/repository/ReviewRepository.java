@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
     // Các phương thức truy vấn tùy chỉnh (nếu cần)
     List<RoomReview> findByRoomId(UUID roomId);
+
 }

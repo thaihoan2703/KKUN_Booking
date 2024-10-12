@@ -11,6 +11,7 @@ import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
 import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentType;
+import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.repository.*;
 import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.service.BookingService;
@@ -31,13 +32,15 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final RoomRepository roomRepository;
+    private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final PaymentService paymentService;
 
-    public BookingServiceImpl(BookingRepository bookingRepository,RoomRepository roomRepository, PaymentRepository paymentRepository, UserRepository userRepository, PaymentService paymentService) {
+    public BookingServiceImpl(BookingRepository bookingRepository, RoomRepository roomRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository, UserRepository userRepository, PaymentService paymentService) {
         this.bookingRepository = bookingRepository;
         this.roomRepository = roomRepository;
         this.paymentRepository = paymentRepository;
+        this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
         this.paymentService = paymentService;
     }
@@ -99,6 +102,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         booking.setReviewed(true);
+        booking.setCreatedDate(LocalDateTime.now());
         bookingRepository.save(booking);
     }
     public List<Booking> getCompletedBookingsWithoutReview() {
@@ -124,6 +128,8 @@ public class BookingServiceImpl implements BookingService {
 
         return totalPrice;
     }
+
+
     @Override
     public PaymentResponse.BaseResponse initiatePayment(UUID bookingId, PaymentType paymentType, HttpServletRequest request) {
         Booking booking = bookingRepository.findById(bookingId)

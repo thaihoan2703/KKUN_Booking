@@ -1,4 +1,4 @@
-package com.backend.KKUN_Booking.dto.abstractDto;
+package com.backend.KKUN_Booking.dto.abstractDto.ReviewAbstract;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.backend.KKUN_Booking.dto.ReviewDto;

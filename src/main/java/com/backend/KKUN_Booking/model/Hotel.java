@@ -18,8 +18,6 @@ public class Hotel {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-
-
     private String name;
     private String category;
     private Double rating;
@@ -49,7 +47,23 @@ public class Hotel {
     )
     private List<Amenity> amenities = new ArrayList<>();
 
+    // Method to update the hotel's average rating based on its rooms
+    public void updateRating() {
+        if (rooms.isEmpty()) {
+            this.rating = 0.0;  // Default to 0 if there are no rooms
+            return;
+        }
 
+        // Calculate the average rating based on room reviews, filtering out null ratings
+        double averageRating = rooms.stream()
+                .map(Room::getAverageRating) // Get the average rating of each room
+                .filter(rating -> rating != null) // Filter out null ratings
+                .mapToDouble(Double::doubleValue) // Convert to double stream
+                .average() // Calculate the average of those ratings
+                .orElse(0.0); // Default to 0 if no valid ratings exist
+
+        this.rating = averageRating; // Set the hotel rating to the calculated average
+    }
     // Getters and Setters
 }
 

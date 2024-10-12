@@ -3,6 +3,7 @@ package com.backend.KKUN_Booking.scheduler;
 import com.backend.KKUN_Booking.model.Booking;
 import com.backend.KKUN_Booking.service.BookingService;
 import com.backend.KKUN_Booking.service.NotificationService;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,11 +22,16 @@ public class BookingReviewScheduler {
         this.notificationService = notificationService;
     }
 
-    @Scheduled(cron = "0 0 * * * *") // Run every hour
+    @Scheduled(cron = "0 0 * * * *") // Chạy mỗi giờ
     public void checkCompletedBookingsForReview() {
         List<Booking> completedBookings = bookingService.getCompletedBookingsWithoutReview();
         for (Booking booking : completedBookings) {
-            notificationService.sendReviewReminder(booking.getUser(), booking);
+            try {
+                notificationService.sendReviewReminder(booking.getUser(), booking);
+            } catch (MessagingException e) {
+                // Xử lý ngoại lệ ở đây (log, thông báo, v.v.)
+                System.err.println("Error sending review reminder: " + e.getMessage());
+            }
         }
     }
 }

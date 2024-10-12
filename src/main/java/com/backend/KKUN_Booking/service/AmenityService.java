@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface AmenityService {
     List<AmenityDto> getAllAmenities();
+    List<String> getAmenitiesByIds(List<UUID> amenityIds);
     AmenityDto getAmenityById(UUID id);
     AmenityDto createAmenity(AmenityDto amenityDto);
     AmenityDto updateAmenity(UUID id, AmenityDto amenityDto);

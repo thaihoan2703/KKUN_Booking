@@ -1,13 +1,16 @@
 package com.backend.KKUN_Booking.service.implement;
 
+import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.RoomDto;
 import com.backend.KKUN_Booking.dto.WishListDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
+import com.backend.KKUN_Booking.model.Hotel;
 import com.backend.KKUN_Booking.model.Room;
 import com.backend.KKUN_Booking.model.User;
 import com.backend.KKUN_Booking.model.WishList;
 import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.repository.WishListRepository;
+import com.backend.KKUN_Booking.service.HotelService;
 import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.service.UserService;
 import com.backend.KKUN_Booking.service.WishListService;
@@ -26,12 +29,14 @@ public class WishListServiceImpl implements WishListService {
     private final UserRepository userRepository;
     private final UserService userService; // Assuming you have a UserService
     private final RoomService roomService; // Assuming you have a RoomService
+    private final HotelService hotelService; // Assuming you have a RoomService
 
-    public WishListServiceImpl(WishListRepository wishListRepository, UserRepository userRepository, UserService userService, RoomService roomService) {
+    public WishListServiceImpl(WishListRepository wishListRepository, UserRepository userRepository, UserService userService, RoomService roomService, HotelService hotelService) {
         this.wishListRepository = wishListRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.roomService = roomService;
+        this.hotelService = hotelService;
     }
 
     // Thêm mới mục vào danh sách yêu thích
@@ -44,6 +49,9 @@ public class WishListServiceImpl implements WishListService {
         WishList wishList = convertToEntity(wishListDto);
         wishList.setUser(user);
         wishListRepository.save(wishList);
+        RoomDto roomDto = roomService.getRoomById(wishList.getRoom().getId());
+        HotelDto hotelDto = hotelService.getHotelById(roomDto.getHotelId());
+        userService.saveSaveHotel(user.getId(), hotelDto.getId());
         return convertToDto(wishList);
     }
 

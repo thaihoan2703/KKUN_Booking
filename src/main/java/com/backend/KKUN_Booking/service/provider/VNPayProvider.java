@@ -101,7 +101,7 @@ public class VNPayProvider extends PaymentProvider {
 
     private PaymentResponse.BaseResponse buildSuccessResponse(String transactionCode) {
         return PaymentResponse.BaseResponse.builder()
-                .code("ok")
+                .code("200")
                 .message("Payment successful")
                 .status(PaymentStatus.COMPLETED)
                 .transactionCode(transactionCode)  // Return paymentId
