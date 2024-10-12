@@ -56,13 +56,19 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         // Proceed with user creation
         User user = convertToEntity(userDto);
         user.setCreatedDate(LocalDateTime.now());
-
         return convertToDto(userRepository.save(user));
     }
 
     @Override
     public UserDto getUserById(UUID id) {
         User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return convertToDto(user);
+    }
+
+    @Override
+    public UserDto getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return convertToDto(user);
     }
@@ -120,7 +126,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
         user.setEmail(userDto.getEmail());
-        user.setAlias(userDto.getAlias());
+        user.setAlias(CommonFunction.generateAlias(userDto.getFirstName(),userDto.getLastName()));
         user.setStatus(UserStatus.ACTIVE);
         user.setRole(role);
 

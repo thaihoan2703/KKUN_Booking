@@ -1,5 +1,7 @@
 package com.backend.KKUN_Booking.model;
 
+import com.backend.KKUN_Booking.converter.StringListConverter;
+import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,10 +20,14 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    private String type;
+    private RoomType type;
     private Integer capacity;
     private Double basePrice;
     private Boolean available;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "room_images", columnDefinition = "TEXT") // Lưu dưới dạng TEXT
+    private List<String> roomImages = new ArrayList<>(); // Khởi tạo danh sách
 
     @ManyToMany
     @JoinTable(

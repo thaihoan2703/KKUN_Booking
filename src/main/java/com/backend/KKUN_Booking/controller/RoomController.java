@@ -1,10 +1,13 @@
 package com.backend.KKUN_Booking.controller;
 
+import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.RoomDto;
 import com.backend.KKUN_Booking.service.RoomService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
@@ -32,19 +35,21 @@ public class RoomController {
         return ResponseEntity.ok(room); // Trả về phòng với trạng thái 200 OK
     }
 
-    @PostMapping
-    public ResponseEntity<RoomDto> createRoom(@RequestBody RoomDto roomDto, Principal principal) {
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<RoomDto> createRoom(@ModelAttribute RoomDto roomDto,
+                                              @RequestParam(value = "roomImageList", required = false) MultipartFile[] roomImageList, Principal principal) {
         // Lấy email hoặc username
         String userEmail = principal.getName();  // Lấy email hoặc username từ authentication
-        RoomDto createdRoom = roomService.createRoom(roomDto, userEmail);
+        RoomDto createdRoom = roomService.createRoom(roomDto,roomImageList, userEmail);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRoom); // Trả về phòng mới với trạng thái 201 Created
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<RoomDto> updateRoom(@PathVariable UUID id, @RequestBody RoomDto roomDto, Principal principal) {
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RoomDto> updateRoom(@PathVariable UUID id, @ModelAttribute RoomDto roomDto,
+                                              @RequestParam(value = "roomImageList", required = false) MultipartFile[] roomImageList, Principal principal) {
         // Lấy email hoặc username
         String userEmail = principal.getName();  // Lấy email hoặc username từ authentication
-        RoomDto updatedRoom = roomService.updateRoom(id, roomDto, userEmail);
+        RoomDto updatedRoom = roomService.updateRoom(id, roomDto, roomImageList, userEmail);
         return ResponseEntity.ok(updatedRoom); // Trả về phòng đã cập nhật với trạng thái 200 OK
     }
 

@@ -3,9 +3,12 @@ package com.backend.KKUN_Booking.controller;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.service.HotelService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
@@ -30,23 +33,32 @@ public class HotelController {
         return hotelService.getHotelById(id);
     }
 
-    @PostMapping
-    public ResponseEntity<HotelDto> createHotel(@RequestBody HotelDto hotelDto, Principal principal) {
-        // Lấy email hoặc username
-        String userEmail = principal.getName();  // Lấy email hoặc username từ authentication
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<HotelDto> createHotel(
+            @ModelAttribute HotelDto hotelDto,
+            @RequestParam(value = "exteriorImageList", required = false) MultipartFile[] exteriorImageList,
+            Principal principal) throws IOException {
 
-        // Truyền thông tin user qua Service để tạo hotel
-        HotelDto createdHotel = hotelService.createHotel(hotelDto, userEmail);
+        // Get the email or username of the authenticated user
+        String userEmail = principal.getName();
+
+        // Pass the data to the service layer
+        HotelDto createdHotel = hotelService.createHotel(hotelDto, exteriorImageList, userEmail);
+
         return new ResponseEntity<>(createdHotel, HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<HotelDto> updateHotel(@PathVariable UUID id, @RequestBody HotelDto hotelDto,Principal principal ) {
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<HotelDto> updateHotel(
+            @PathVariable UUID id,
+            @ModelAttribute HotelDto hotelDto,
+            @RequestParam(value = "exteriorImageList", required = false) MultipartFile[] exteriorImageList,
+            Principal principal) {
+
         // Lấy email hoặc username từ token JWT
         String userEmail = principal.getName(); // Thường là email hoặc username
-        HotelDto updatedHotel = hotelService.updateHotel(id, hotelDto,userEmail);
+        HotelDto updatedHotel = hotelService.updateHotel(id, hotelDto, exteriorImageList, userEmail);
         return new ResponseEntity<>(updatedHotel, HttpStatus.OK);
-
     }
 
     @DeleteMapping("/{id}")

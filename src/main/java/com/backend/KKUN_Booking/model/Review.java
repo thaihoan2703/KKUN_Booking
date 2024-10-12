@@ -14,6 +14,7 @@ public abstract class Review {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
+    @Column(length = 1000)
     private String comment;
     private LocalDateTime date;
 
