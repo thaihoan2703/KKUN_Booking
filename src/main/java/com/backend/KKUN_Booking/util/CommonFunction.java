@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.Normalizer;
+import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,12 @@ public class CommonFunction {
         seoFileName = seoFileName.replaceAll("[^a-z0-9\\-]", "-");
         seoFileName = seoFileName.replaceAll("-+", "-"); // Loại bỏ dấu gạch ngang thừa
         return seoFileName;
+    }
+    // Hàm loại bỏ dấu và ký tự đặc biệt
+    private static String normalizeString(String input) {
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(normalized).replaceAll("").replaceAll("[^a-zA-Z0-9]", "");
     }
     public static String saveFile(String seoUrl, String directory, MultipartFile file) throws IOException {
         File saveFile = new File("src/main/resources/static/images");
@@ -93,4 +100,22 @@ public class CommonFunction {
             return VNPayUtil.getRandomNumber(8);
         }
     }
+    // Hàm tạo alias từ firstName và lastName
+    public static String generateAlias(String firstName, String lastName) {
+        if (firstName == null || lastName == null) {
+            throw new IllegalArgumentException("Tên và họ không được để trống");
+        }
+
+        // Kết hợp firstName và lastName, loại bỏ dấu và ký tự đặc biệt
+        String baseAlias = normalizeString(firstName + "." + lastName);
+
+        // Thêm số ngẫu nhiên để đảm bảo alias là duy nhất
+        Random random = new Random();
+        int randomNum = random.nextInt(1000); // Số ngẫu nhiên từ 0 đến 999
+
+        // Tạo alias hoàn chỉnh
+        return baseAlias.toLowerCase(Locale.ROOT) + "-" + randomNum;
+    }
+
+
 }

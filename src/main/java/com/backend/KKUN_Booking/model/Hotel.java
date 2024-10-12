@@ -1,6 +1,7 @@
 package com.backend.KKUN_Booking.model;
 
 import com.backend.KKUN_Booking.converter.StringListConverter;
+import com.backend.KKUN_Booking.model.enumModel.HotelCategory;
 import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -20,7 +21,7 @@ public class Hotel {
     private UUID id;
 
     private String name;
-    private String category;
+    private HotelCategory category;
     private Double rating;
     private String location;
 

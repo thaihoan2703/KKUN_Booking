@@ -1,6 +1,7 @@
 package com.backend.KKUN_Booking.model;
 
 import com.backend.KKUN_Booking.converter.StringListConverter;
+import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    private String type;
+    private RoomType type;
     private Integer capacity;
     private Double basePrice;
     private Boolean available;

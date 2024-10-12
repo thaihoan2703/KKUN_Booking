@@ -56,7 +56,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         // Proceed with user creation
         User user = convertToEntity(userDto);
         user.setCreatedDate(LocalDateTime.now());
-
         return convertToDto(userRepository.save(user));
     }
 
@@ -127,7 +126,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
         user.setEmail(userDto.getEmail());
-        user.setAlias(userDto.getAlias());
+        user.setAlias(CommonFunction.generateAlias(userDto.getFirstName(),userDto.getLastName()));
         user.setStatus(UserStatus.ACTIVE);
         user.setRole(role);
 

@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.dto;
 
+import com.backend.KKUN_Booking.model.enumModel.HotelCategory;
 import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
 import lombok.Data;
 import lombok.Getter;
@@ -14,7 +15,7 @@ import java.util.UUID;
 public class HotelDto {
     private UUID id;
     private String name;
-    private String category;
+    private HotelCategory category;
     private Double rating;
     private String location;
     private PaymentPolicy paymentPolicy;

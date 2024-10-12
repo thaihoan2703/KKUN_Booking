@@ -117,7 +117,7 @@ public class RoomServiceImpl implements RoomService {
         if (roomImages != null) {
             for (MultipartFile image : roomImages) {
                 if (!image.isEmpty()) {
-                    String uniqueFileName = createUniqueFileName(roomDto.getType());
+                    String uniqueFileName = createUniqueFileName(roomDto.getType().toString());
                     String s3ImageUrl = amazonS3Service.uploadRoomFile(image, roomDto.getHotelId().toString(), uniqueFileName);
                     imageUrls.add(s3ImageUrl);
                 }
