@@ -6,12 +6,16 @@
 ## Yêu cầu hệ thống
 - Sử dụng ngôn ngữ Java.
 - Các thư viện hoặc phần mềm cần thiết:
-  - IDE InteliJ (hoặc các IDE hỗ trợ Java)
+  - IDE InteliJ Idea (hoặc các IDE hỗ trợ Java)
   - Spring Boot
 ## Cài đặt
 1. Clone dự án về máy:
    - git clone https://github.com/thaihoan2703/KKUN_Booking.git
 2. Tạo file local.env
-   - Để lưu các Key của file application.properties
+   - Nếu sử dụng InteliJ Idea
+       - Vào Settings -> Plugins -> Tải EnvFile -> Restart IDE
+       - Vào Run/Debug Configurations -> Bật Enable EnvFile -> Add file *.env (local.env) 
+   - Cập nhật vào file *.env các Key đã lưu trong file application.properties
    - Tăng tính bảo mật
-5. Chạy dự án.
+3. Sử dụng Database Postgres
+4. Chạy dự án.
