@@ -33,9 +33,9 @@ public class RecommendationController {
         return ResponseEntity.ok(recommendations);
     }
 
-    @GetMapping("/popular")
-    public ResponseEntity<List<HotelDto>> getPopularHotels() {
-        List<HotelDto> popularHotels = recommendationService.getPopularHotels();
+    @GetMapping("/top-rating")
+    public ResponseEntity<List<HotelDto>> getTopRatingHotels() {
+        List<HotelDto> popularHotels = recommendationService.getTopRatingHotels();
         return ResponseEntity.ok(popularHotels);
     }
 

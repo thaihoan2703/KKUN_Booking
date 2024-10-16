@@ -28,7 +28,7 @@ public class SearchController {
     @GetMapping("/hotels")
     public ResponseEntity<List<HotelSearchResultDto>> searchHotels(@RequestParam String location,
                                                                    @RequestParam LocalDateTime checkInDate, @RequestParam LocalDateTime checkOutDate,
-                                                                   @RequestParam int guests, Principal principal) {
+                                                                   @RequestParam int guests) {
 
         List<HotelSearchResultDto> results = searchService.searchHotels(location, checkInDate, checkOutDate, guests);
         return ResponseEntity.ok(results);
