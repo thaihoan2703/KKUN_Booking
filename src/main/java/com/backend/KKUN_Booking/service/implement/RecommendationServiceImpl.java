@@ -92,7 +92,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         return score;
     }
 
-    public List<HotelDto> getPopularHotels() {
+    public List<HotelDto> getTopRatingHotels() {
         // This method could be implemented to return a list of generally popular hotels
         // based on overall ratings, number of bookings, etc.
         return hotelService.findTopHotelsByRating(10);

@@ -202,13 +202,15 @@ public class HotelServiceImpl implements HotelService {
 
     private List<String> uploadExteriorImages(MultipartFile[] exteriorImages, HotelDto hotelDto) {
         List<String> exteriorImageUrls = new ArrayList<>();
-        HotelDto hotelDtoTemp = getHotelById(hotelDto.getId());
-        // Lấy danh sách các URL ảnh cũ từ hotelDto
-        List<String> oldImageUrls = hotelDtoTemp.getExteriorImages(); // Giả sử hotelDto có phương thức này
-        if (oldImageUrls != null) { // Kiểm tra xem oldImageUrls có phải là null không
-            // Xóa các ảnh cũ trước khi tải ảnh mới lên
-            for (String oldImageUrl : oldImageUrls) {
-                amazonS3Service.deleteFile(oldImageUrl); // Xóa ảnh cũ
+        if(hotelDto.getId() != null){
+            HotelDto hotelDtoTemp = getHotelById(hotelDto.getId());
+            // Lấy danh sách các URL ảnh cũ từ hotelDto
+            List<String> oldImageUrls = hotelDtoTemp.getExteriorImages(); // Giả sử hotelDto có phương thức này
+            if (oldImageUrls != null) { // Kiểm tra xem oldImageUrls có phải là null không
+                // Xóa các ảnh cũ trước khi tải ảnh mới lên
+                for (String oldImageUrl : oldImageUrls) {
+                    amazonS3Service.deleteFile(oldImageUrl); // Xóa ảnh cũ
+                }
             }
         }
 
