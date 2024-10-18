@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.security;
 
+import com.backend.KKUN_Booking.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -7,11 +8,13 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
@@ -24,17 +27,36 @@ public class JwtTokenProvider {
 
     @SuppressWarnings("deprecation")
     public String generateToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Object principal = authentication.getPrincipal();
 
-        return Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, jwtSecret )
-                .compact();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            UUID userId = userDetails.getId();
+            String firstName = userDetails.getFirstName();
+            String lastName = userDetails.getLastName();
+            String role = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .orElse("");
+
+            Date now = new Date();
+            Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+            return Jwts.builder()
+                    .setSubject(userDetails.getUsername())
+                    .claim("userId", userId.toString())
+                    .claim("firstName", firstName)
+                    .claim("lastName", lastName)
+                    .claim("role", role)
+                    .setIssuedAt(now)
+                    .setExpiration(expiryDate)
+                    .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                    .compact();
+        } else {
+            throw new IllegalArgumentException("Principal is not an instance of UserDetailsImpl");
+        }
     }
+
 
     // Validate the token
     public boolean validateToken(String token) {

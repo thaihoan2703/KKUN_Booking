@@ -31,6 +31,7 @@ public abstract class UserDto {
     private LocalDateTime createdDate;
     private UserStatus status;
     private String password;
+    private String rePassword;
     private UUID roleId;
 
     // Thông tin xác thực
