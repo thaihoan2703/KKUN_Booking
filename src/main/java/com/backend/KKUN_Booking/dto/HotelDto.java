@@ -24,6 +24,9 @@ public class HotelDto {
     private List<RoomDto> rooms;  // List of room details
     private List<UUID> amenityIds;
 
+    public String getCategoryDisplayName() {
+        return category != null ? category.getDisplayName() : null;
+    }
     // Getters and Setters
 }
 

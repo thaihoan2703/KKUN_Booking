@@ -10,10 +10,12 @@ import com.backend.KKUN_Booking.model.*;
 import com.backend.KKUN_Booking.model.UserAbstract.AdminUser;
 import com.backend.KKUN_Booking.model.UserAbstract.CustomerUser;
 import com.backend.KKUN_Booking.model.UserAbstract.HotelOwnerUser;
+import com.backend.KKUN_Booking.model.enumModel.AuthProvider;
 import com.backend.KKUN_Booking.model.enumModel.RoleUser;
 import com.backend.KKUN_Booking.model.enumModel.UserStatus;
 import com.backend.KKUN_Booking.repository.RoleRepository;
 import com.backend.KKUN_Booking.repository.UserRepository;
+import com.backend.KKUN_Booking.security.UserDetailsImpl;
 import com.backend.KKUN_Booking.service.UserService;
 import com.backend.KKUN_Booking.util.*;
 import jakarta.transaction.Transactional;
@@ -56,6 +58,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         // Proceed with user creation
         User user = convertToEntity(userDto);
         user.setCreatedDate(LocalDateTime.now());
+        user.setAuthProvider(AuthProvider.LOCAL);
         return convertToDto(userRepository.save(user));
     }
 
@@ -100,23 +103,16 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     private User convertToEntity(UserDto userDto) {
         User user;
-        // Get the role by roleId
-        Role role = roleRepository.findById(userDto.getRoleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
-
-        // Determine user type based on role ID
-        if (role.getName().equals(RoleUser.ADMIN.name())) {
-            user = new AdminUser();
-            AdminUserDto adminUserDto = (AdminUserDto) userDto;
-            ((AdminUser) user).setManagedSections(adminUserDto.getManagedSections());
-            ((AdminUser) user).setActionCount(adminUserDto.getActionCount());
-        } else if (role.getName().equals(RoleUser.CUSTOMER.name())) {
+        Role role;
+        if (userDto instanceof CustomerUserDto) {
             user = new CustomerUser();
-            CustomerUserDto customerUserDto = (CustomerUserDto) userDto;
+            role = roleRepository.findByName(RoleUser.CUSTOMER.name())
+                    .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
             // Additional mapping if needed
-        } else if (role.getName().equals(RoleUser.HOTELOWNER.name())) {
+        } else if (userDto instanceof HotelOwnerUserDto) {
             user = new HotelOwnerUser();
-            HotelOwnerUserDto hotelOwnerUserDto = (HotelOwnerUserDto) userDto;
+            role = roleRepository.findByName(RoleUser.HOTELOWNER.name())
+                    .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
             // Additional mapping if needed
         } else {
             throw new IllegalArgumentException("Unknown role type");
@@ -215,32 +211,39 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public void saveOauthUser(String email) {
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new UserAlreadyExistsException("Email already registered.");
+    public User findOrSaveOauthUser(String email, String name) {
+        // Tìm kiếm người dùng bằng email
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
+            // Nếu người dùng đã tồn tại, trả về đối tượng người dùng
+            return optionalUser.get();
+        } else {
+            // Nếu người dùng chưa tồn tại, tạo người dùng mới
+            User newUser = new User();
+            newUser.setEmail(email);
+            newUser.setFirstName(name); // Lưu tên hoặc bạn có thể tách họ và tên riêng ra
+            newUser.setAuthProvider(AuthProvider.GOOGLE); // Đặt kiểu xác thực là Google
+            newUser.setCreatedDate(LocalDateTime.now());
+            newUser.setStatus(UserStatus.ACTIVE);
+
+            // Gán vai trò mặc định cho người dùng, ví dụ "ROLE_USER"
+            Role userRole = roleRepository.findByName(RoleUser.CUSTOMER.name())
+                    .orElseThrow(() -> new RuntimeException("User Role not found"));
+            newUser.setRole(userRole);
+
+            // Lưu người dùng mới vào cơ sở dữ liệu
+            return userRepository.save(newUser);
         }
-        User user = new CustomerUser(); // Assuming OAuth users are customers by default
-        user.setEmail(email);
-        user.setCreatedDate(LocalDateTime.now());
-        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-        user.setAlias(CommonFunction.saveAliasAccount(email));
-        user.setStatus(UserStatus.ACTIVE);
-        userRepository.save(user);
     }
+
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        var user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword())
-                .authorities(user.getAuthorities())
-                .accountExpired(!user.isAccountNonExpired())
-                .accountLocked(!user.isAccountNonLocked())
-                .credentialsExpired(!user.isCredentialsNonExpired())
-                .disabled(!user.isEnabled())
-                .build();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+
+        return UserDetailsImpl.build(user);
     }
 
     @Transactional

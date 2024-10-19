@@ -12,6 +12,9 @@ import java.util.UUID;
 public class RoomDto {
     private UUID id;
     private RoomType type;
+    public String getTypeDisplayName() {
+        return type != null ? type.getDisplayName() : null;
+    }
     private int capacity;
     private double basePrice;
     private boolean available;
@@ -19,4 +22,6 @@ public class RoomDto {
     private List<String> roomImages;
     private List<UUID> amenityIds;
     // Getters and Setters
+
+
 }

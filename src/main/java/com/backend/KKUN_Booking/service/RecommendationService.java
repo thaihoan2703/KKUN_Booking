@@ -10,6 +10,6 @@ import java.util.UUID;
 
 public interface RecommendationService {
     List<HotelDto> getPersonalizedRecommendations(UUID userId);
-    List<HotelDto> getPopularHotels();
+    List<HotelDto> getTopRatingHotels();
     List<HotelDto> getTrendingDestinations();
 }
