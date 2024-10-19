@@ -20,7 +20,7 @@ import java.util.UUID;
 @Setter
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "users")
-public abstract class User implements UserDetails {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -38,7 +38,8 @@ public abstract class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    private String authProvider;
+    @Enumerated(EnumType.STRING)
+    private AuthProvider authProvider;
 
     @ElementCollection
     private List<String> preferredDestinations;
