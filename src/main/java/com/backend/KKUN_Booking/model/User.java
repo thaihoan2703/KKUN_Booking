@@ -29,6 +29,10 @@ public class User implements UserDetails {
     private String lastName;
     private String email;
     private String alias;
+    private String address;
+    private String phone;
+    private String avatar;
+
     private LocalDateTime createdDate;
 
     @Enumerated(EnumType.STRING)

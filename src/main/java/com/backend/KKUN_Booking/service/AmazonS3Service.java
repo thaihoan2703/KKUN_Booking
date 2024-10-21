@@ -124,26 +124,38 @@ public class AmazonS3Service {
         }
     }
     public String uploadAvatarUserFile(MultipartFile multipartFile, String seoUrl) {
+        // Convert the MultipartFile to a File
         File file = convertMultiPartFileToFile(multipartFile);
         if (file == null) {
             throw new RuntimeException("Failed to convert MultipartFile to File");
         }
 
         try {
+            // Generate the file name with a timestamp and SEO-friendly URL
             String fileName = "images/users/" + new Date().getTime() + "_" + seoUrl;
+
+            // Create a PutObjectRequest to upload the file to S3
             PutObjectRequest putObjectRequest = new PutObjectRequest(awsProvider.getBucket(), fileName, file)
                     .withCannedAcl(CannedAccessControlList.PublicRead);
+
+            // Upload the file to S3
             amazonS3.putObject(putObjectRequest);
 
-            // Xóa file tạm thời
-            file.delete();
+            // Delete the local temporary file
+            if (file.delete()) {
+                System.out.println("Temporary file deleted successfully");
+            } else {
+                System.err.println("Failed to delete temporary file");
+            }
 
+            // Return the public URL of the uploaded file
             return amazonS3.getUrl(awsProvider.getBucket(), fileName).toString();
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("Error while uploading avatar", e);
+            throw new RuntimeException("Error while uploading avatar: " + e.getMessage(), e);
         }
     }
+
 
     private File convertMultiPartFileToFile(MultipartFile file) {
         try {
