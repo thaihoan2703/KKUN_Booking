@@ -2,6 +2,7 @@ package com.backend.KKUN_Booking.service;
 
 import com.backend.KKUN_Booking.dto.UserDto;
 import com.backend.KKUN_Booking.model.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -11,7 +12,7 @@ public interface UserService {
     UserDto getUserById(UUID id);
     UserDto getUserByEmail(String email);
     UserDto createUser(UserDto userDto);
-    UserDto updateUser(UUID id, UserDto userDto);
+    UserDto updateUser(UUID id, UserDto userDto, MultipartFile profileImage);
     void deleteUser(UUID id);
 
     User findOrSaveOauthUser(String email, String name);
