@@ -14,7 +14,7 @@ public interface UserService {
     UserDto createUser(UserDto userDto);
     UserDto updateUser(UUID id, UserDto userDto, MultipartFile profileImage);
     void deleteUser(UUID id);
-
+    void changePassword( UUID userId, String oldPassword, String newPassword);
     User findOrSaveOauthUser(String email, String name);
 
     void addRecentSearch(UUID userId, String searchTerm);
