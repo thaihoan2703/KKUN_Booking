@@ -207,6 +207,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         userDto.setStatus(user.getStatus());
         userDto.setRoleId(user.getRole() != null ? user.getRole().getId() : null);
         userDto.setPassword(user.getPassword());
+        userDto.setHasPassword(user.getPassword() != null && !user.getPassword().isEmpty());
+        userDto.setAuthProvider(user.getAuthProvider());
         return userDto;
     }
 
@@ -288,6 +290,38 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             return userRepository.save(newUser);
         }
     }
+
+    @Override
+    public void changePassword(UUID userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // Kiểm tra nếu người dùng đã đăng nhập bằng OAuth (Google, Facebook, v.v.)
+        if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+            // Nếu là tài khoản Google và chưa bao giờ thiết lập mật khẩu trước đó
+            if (user.getPassword() == null || user.getPassword().isEmpty()) {
+                // Người dùng không có mật khẩu ban đầu, cho phép thiết lập mật khẩu mới
+                user.setPassword(passwordEncoder.encode(newPassword));
+                userRepository.save(user);
+                return;
+            } else {
+                // Nếu là tài khoản Google và đã có mật khẩu trước đó, yêu cầu mật khẩu cũ
+                if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+                    throw new IllegalArgumentException("Mật khẩu cũ không chính xác");
+                }
+            }
+        } else {
+            // Nếu là người dùng thông thường, kiểm tra mật khẩu cũ
+            if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+                throw new IllegalArgumentException("Mật khẩu cũ không chính xác");
+            }
+        }
+
+        // Mã hóa và cập nhật mật khẩu mới
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
 
 
     @Override

@@ -63,7 +63,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/admin/**",  "/api/roles/**").hasAnyAuthority(RoleUser.ADMIN.name())
                         .requestMatchers("/api/hotels**", "/api/rooms/**","/api/payments/**","/api/amenities/**").hasAuthority(RoleUser.HOTELOWNER.name())
                         .requestMatchers("/api/wishlist/**","/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
-                        .requestMatchers("/@**/settings").authenticated()
+                        .requestMatchers("/@**/settings","/api/users/*/change-password").authenticated()
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {

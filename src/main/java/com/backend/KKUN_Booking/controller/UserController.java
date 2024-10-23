@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.controller;
 
+import com.backend.KKUN_Booking.dto.ChangePasswordRequest;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.UserDto;
 import com.backend.KKUN_Booking.dto.abstractDto.UserAbstract.AdminUserDto;
@@ -18,8 +19,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,6 +52,27 @@ public class UserController {
     public ResponseEntity<UserDto> getUserById(@PathVariable UUID id) {
         UserDto user = userService.getUserById(id);
         return ResponseEntity.ok(user); // Trả về người dùng với trạng thái 200 OK
+    }
+
+    @PostMapping("/{id}/change-password")
+    public ResponseEntity<String> changePassword(
+            @PathVariable UUID id,
+              @RequestBody ChangePasswordRequest request) {
+        try {
+            // Kiểm tra xem newPassword và confirmNewPassword có khớp không
+            if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+                return ResponseEntity.badRequest().body("Mật khẩu mới và xác nhận mật khẩu không khớp");
+            }
+
+            userService.changePassword(id, request.getOldPassword(), request.getNewPassword());
+            return ResponseEntity.ok("Mật khẩu đã được thay đổi thành công.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Mật khẩu cũ không chính xác.");
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng với ID đã cung cấp.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Đã xảy ra lỗi khi thay đổi mật khẩu.");
+        }
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
