@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public UserDto createUser(UserDto userDto) {
         if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-            throw new UserAlreadyExistsException("Email already in use");
+            throw new UserAlreadyExistsException("Email này đã tồn tai");
         }
 
         // Proceed with user creation

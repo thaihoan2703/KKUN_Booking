@@ -20,6 +20,7 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
+    @Enumerated(EnumType.STRING)
     private RoomType type;
     private Integer capacity;
     private Double basePrice;

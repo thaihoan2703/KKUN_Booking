@@ -134,6 +134,7 @@ public class HotelServiceImpl implements HotelService {
         hotelDto.setExteriorImages(hotel.getExteriorImages());
         hotelDto.setRoomImages(hotel.getRoomImages());
         hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
+        hotelDto.setNumOfReviews(hotel.getNumOfReviews());
         hotelDto.setAmenityIds(hotel.getAmenities().stream().map(Amenity::getId).collect(Collectors.toList()));
         hotelDto.setRooms(hotel.getRooms().stream().map(this::convertRoomToDto).collect(Collectors.toList()));
         return hotelDto;

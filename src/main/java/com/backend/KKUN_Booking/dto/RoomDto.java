@@ -21,6 +21,7 @@ public class RoomDto {
     private UUID hotelId;   // Foreign key to hotel
     private List<String> roomImages;
     private List<UUID> amenityIds;
+    private int numOfReviews;
     // Getters and Setters
 
 

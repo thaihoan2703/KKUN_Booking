@@ -21,6 +21,8 @@ public class Hotel {
     private UUID id;
 
     private String name;
+
+    @Enumerated(EnumType.STRING)
     private HotelCategory category;
     private Double rating;
     private String location;
@@ -52,6 +54,8 @@ public class Hotel {
     )
     private List<Amenity> amenities = new ArrayList<>();
 
+    @Column(name = "num_of_reviews", nullable = false, columnDefinition = "integer default 0")
+    private int numOfReviews = 0;
     // Method to update the hotel's average rating based on its rooms
     public void updateRating() {
         if (rooms.isEmpty()) {
@@ -79,6 +83,14 @@ public class Hotel {
                 .orElse(0.0);  // Default to 0 if no ratings exist
 
         this.rating = averageRating;  // Update the hotel's rating to the calculated average
+    }
+    public void updateNumOfReviews() {
+        // Đếm tổng số review của tất cả các phòng thuộc khách sạn này
+        int totalReviews = rooms.stream()
+                .mapToInt(room -> room.getReviews().size())  // Lấy số lượng review của mỗi phòng
+                .sum();  // Tính tổng số review từ tất cả các phòng
+
+        this.numOfReviews = totalReviews;  // Cập nhật giá trị cho numOfReviews
     }
     // Getters and Setters
 }

@@ -74,6 +74,7 @@ public class ReviewServiceImpl implements ReviewService {
             Room room = booking.getRoom();
             if (room != null && room.getHotel() != null) {
                 room.getHotel().updateRating(); // Update the hotel rating
+                room.getHotel().updateNumOfReviews();
             }
         } else if (reviewDto instanceof TouringReviewDto) {
             createdReview = createTouringReview((TouringReviewDto) reviewDto, booking);
