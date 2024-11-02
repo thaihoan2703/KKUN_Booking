@@ -26,5 +26,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                                          @Param("checkoutDate") LocalDateTime checkoutDate);
 
     List<Booking> findByCheckoutDateBeforeAndReviewedFalse(LocalDateTime date);
+
+    @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId")
+    List<Booking> findByRoomId(@Param("roomId") UUID roomId);
 }
 

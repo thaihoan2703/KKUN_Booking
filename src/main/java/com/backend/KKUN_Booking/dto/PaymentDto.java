@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PaymentDto {
     private UUID id;
-    private Double amount;                // Amount paid or to be paid
+    private BigDecimal amount;                // Amount paid or to be paid
     private PaymentStatus status; // Status of the payment
     private PaymentType paymentType; // Type of payment
     private LocalDateTime paymentDate;        // Date of payment

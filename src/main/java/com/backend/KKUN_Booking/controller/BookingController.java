@@ -45,11 +45,18 @@ public class BookingController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<BookingDto> createBooking( @RequestBody BookingDto bookingDto,
-                                                     Principal principal) {
-        // Lấy email hoặc username
-        String userEmail = principal.getName();  // Lấy email hoặc username từ authentication
+    public ResponseEntity<?> createBooking(@RequestBody BookingDto bookingDto, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Vui lòng đăng nhập tài khoản!");
+        }
+
+        // Lấy email hoặc username từ authentication
+        String userEmail = principal.getName();
+
+        // Gọi service để tạo booking với thông tin user
         BookingDto createdBooking = bookingService.createBooking(bookingDto, userEmail);
+
+        // Trả về thông tin booking đã tạo
         return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking);
     }
 
@@ -112,4 +119,6 @@ public class BookingController {
         bookingService.deleteBooking(id);
         return ResponseEntity.noContent().build();
     }
+
+
 }

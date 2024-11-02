@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.controller;
 
+import com.backend.KKUN_Booking.dto.BookingDto;
 import com.backend.KKUN_Booking.dto.ChangePasswordRequest;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.UserDto;
@@ -12,6 +13,8 @@ import com.backend.KKUN_Booking.model.UserAbstract.AdminUser;
 import com.backend.KKUN_Booking.model.UserAbstract.CustomerUser;
 import com.backend.KKUN_Booking.model.UserAbstract.HotelOwnerUser;
 import com.backend.KKUN_Booking.repository.UserRepository;
+import com.backend.KKUN_Booking.service.BookingService;
+import com.backend.KKUN_Booking.service.PaymentService;
 import com.backend.KKUN_Booking.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -27,6 +30,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,10 +40,11 @@ public class UserController {
 
     private final UserService userService;
     private  final UserRepository userRepository;
-
-    public UserController(UserService userService, UserRepository userRepository) {
+    private final BookingService bookingService;
+    public UserController(UserService userService, UserRepository userRepository, BookingService bookingService) {
         this.userService = userService;
         this.userRepository = userRepository;
+        this.bookingService = bookingService;
     }
 
     @GetMapping
@@ -49,9 +54,17 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable UUID id) {
+    public ResponseEntity<?> getUserById(@PathVariable UUID id, Principal principal) {
+        // Lấy email của người dùng hiện tại từ Principal
+        String currentUserEmail = principal.getName();
+
+        // Kiểm tra xem người dùng có quyền truy cập thông tin người dùng khác không
         UserDto user = userService.getUserById(id);
-        return ResponseEntity.ok(user); // Trả về người dùng với trạng thái 200 OK
+        if (!user.getEmail().equals(currentUserEmail)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập thông tin của người dùng này.");
+        }
+
+        return ResponseEntity.ok(user); // Trả về thông tin người dùng với trạng thái 200 OK
     }
 
     @PostMapping("/{id}/change-password")
@@ -137,5 +150,12 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build(); // Trả về 204 No Content khi xóa thành công
+    }
+
+    @GetMapping("/booking-hotel/history")
+    public ResponseEntity<List<BookingDto>> getBookingHistory(Principal principal) {
+        String userEmail = principal.getName();
+        List<BookingDto> bookingDtos = bookingService.getBookingHistory(userEmail);
+        return ResponseEntity.ok(bookingDtos);
     }
 }

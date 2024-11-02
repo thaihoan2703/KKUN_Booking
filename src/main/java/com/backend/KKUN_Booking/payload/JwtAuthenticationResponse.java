@@ -1,27 +1,29 @@
 package com.backend.KKUN_Booking.payload;
 
 public class JwtAuthenticationResponse {
-    private String accessToken;
-    private String tokenType = "Bearer";
+    private final String accessToken;
+    private final String refreshToken;
+    private final String tokenType;
 
-    public JwtAuthenticationResponse(String accessToken) {
+    // Constructor khởi tạo với accessToken và refreshToken, mặc định tokenType là "Bearer"
+    public JwtAuthenticationResponse(String accessToken, String refreshToken) {
         this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.tokenType = "Bearer";
     }
 
+    // Getter cho accessToken
     public String getAccessToken() {
         return accessToken;
     }
 
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
+    // Getter cho refreshToken
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
+    // Getter cho tokenType
     public String getTokenType() {
         return tokenType;
     }
-
-    public void setTokenType(String tokenType) {
-        this.tokenType = tokenType;
-    }
 }
-

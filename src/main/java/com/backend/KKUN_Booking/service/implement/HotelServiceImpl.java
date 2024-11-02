@@ -1,5 +1,7 @@
 package com.backend.KKUN_Booking.service.implement;
 
+import com.backend.KKUN_Booking.dto.AmenityDto;
+import com.backend.KKUN_Booking.dto.BookingDto;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.RoomDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
@@ -13,6 +15,7 @@ import com.backend.KKUN_Booking.service.AmazonS3Service;
 import com.backend.KKUN_Booking.service.HotelService;
 import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.util.CommonFunction;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +35,9 @@ public class HotelServiceImpl implements HotelService {
 
     @Autowired
     private RoomService roomService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     public HotelServiceImpl(HotelRepository hotelRepository, UserRepository userRepository,
@@ -80,9 +86,11 @@ public class HotelServiceImpl implements HotelService {
         updateHotelFields(hotel, hotelDto);
         updateExteriorImages(hotel, newExteriorImages, hotelDto);
         updatePaymentPolicy(hotel, hotelDto.getPaymentPolicy());
+        updateAmenities(hotel, hotelDto.getAmenities()); // New method for updating amenities
 
         return convertToDto(hotelRepository.save(hotel));
     }
+
 
     @Override
     public void deleteHotel(UUID id) {
@@ -131,38 +139,80 @@ public class HotelServiceImpl implements HotelService {
         hotelDto.setCategory(hotel.getCategory());
         hotelDto.setRating(hotel.getRating());
         hotelDto.setLocation(hotel.getLocation());
+        hotelDto.setDescription(hotel.getDescription());
         hotelDto.setExteriorImages(hotel.getExteriorImages());
         hotelDto.setRoomImages(hotel.getRoomImages());
         hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
         hotelDto.setNumOfReviews(hotel.getNumOfReviews());
-        hotelDto.setAmenityIds(hotel.getAmenities().stream().map(Amenity::getId).collect(Collectors.toList()));
-        hotelDto.setRooms(hotel.getRooms().stream().map(this::convertRoomToDto).collect(Collectors.toList()));
+        hotelDto.setAmenities(hotel.getAmenities().stream()
+                .map(this::convertAmenityToDto)
+                .collect(Collectors.toList()));
+        hotelDto.setRooms(hotel.getRooms().stream()
+                .map(this::convertRoomToDto)
+                .collect(Collectors.toList()));
         return hotelDto;
     }
+
 
     private Hotel convertToEntity(HotelDto hotelDto) {
         Hotel hotel = new Hotel();
         hotel.setId(hotelDto.getId());
         hotel.setName(hotelDto.getName());
         hotel.setCategory(hotelDto.getCategory());
+        hotel.setDescription(hotelDto.getDescription());
         hotel.setRating(hotelDto.getRating());
         hotel.setLocation(hotelDto.getLocation());
         hotel.setExteriorImages(hotelDto.getExteriorImages());
         hotel.setRoomImages(hotelDto.getRoomImages());
         hotel.setPaymentPolicy(hotelDto.getPaymentPolicy());
         hotel.setRooms(convertRooms(hotelDto.getRooms(), hotel));
-        hotel.setAmenities(convertAmenities(hotelDto.getAmenityIds()));
+
+        // Convert AmenityDto list to Amenity entities
+        if (hotelDto.getAmenities() != null) {
+            List<UUID> amenityIds = hotelDto.getAmenities().stream()
+                    .map(AmenityDto::getId)
+                    .collect(Collectors.toList());
+            hotel.setAmenities(convertAmenities(amenityIds));
+        }
+
         return hotel;
+    }
+
+
+
+    private AmenityDto convertAmenityToDto(Amenity amenity) {
+        AmenityDto amenityDto = new AmenityDto();
+        amenityDto.setId(amenity.getId());
+        amenityDto.setName(amenity.getName());
+        amenityDto.setDescription(amenity.getDescription());
+        amenityDto.setAmenityType(amenity.getAmenityType());
+        // Set other fields as needed
+        return amenityDto;
+    }
+
+    private List<Amenity> convertAmenities(List<UUID> amenityIds) {
+        return amenityRepository.findAllById(amenityIds);
     }
 
     private RoomDto convertRoomToDto(Room room) {
         RoomDto roomDto = new RoomDto();
         roomDto.setId(room.getId());
         roomDto.setType(room.getType());
-        roomDto.setHotelId(room.getHotel().getId());
         roomDto.setCapacity(room.getCapacity());
         roomDto.setBasePrice(room.getBasePrice());
         roomDto.setAvailable(room.getAvailable());
+        roomDto.setHotelId(room.getHotel().getId());
+        roomDto.setRoomImages(room.getRoomImages());
+        roomDto.setBedType(room.getBedType()); // Gán loại giường vào DTO
+        roomDto.setBedCount(room.getBedCount()); // Gán số lượng giường vào DTO
+        roomDto.setArea(room.getArea());
+
+        // Chuyển đổi từ Amenity sang AmenityDto và gán vào roomDto
+        List<AmenityDto> amenityDtos = room.getAmenities().stream()
+                .map(this::convertAmenityToDto)
+                .collect(Collectors.toList());
+        roomDto.setAmenities(amenityDtos);
+
         return roomDto;
     }
 
@@ -174,49 +224,58 @@ public class HotelServiceImpl implements HotelService {
                     return room;
                 }).collect(Collectors.toList()) : new ArrayList<>();
     }
+
     private Room convertRoomToEntity(RoomDto roomDto) {
-        // Convert RoomDto to Room entity
         Room room = new Room();
-        room.setId(roomDto.getId());  // Đảm bảo rằng UUID được xử lý đúng
+        room.setId(roomDto.getId());
         room.setType(roomDto.getType());
         room.setCapacity(roomDto.getCapacity());
         room.setBasePrice(roomDto.getBasePrice());
         room.setAvailable(roomDto.isAvailable());
 
-        // Lấy đối tượng Hotel từ hotelId
         if (roomDto.getHotelId() != null) {
             Hotel hotel = hotelRepository.findById(roomDto.getHotelId())
                     .orElseThrow(() -> new ResourceNotFoundException("Hotel not found"));
-            room.setHotel(hotel); // Gán đối tượng Hotel vào phòng
+            room.setHotel(hotel);
         }
 
         return room;
     }
-    private List<Amenity> convertAmenities(List<UUID> amenityIds) {
-        return amenityIds != null ? amenityIds.stream()
-                .map(amenityId -> {
-                    Amenity amenity = new Amenity();
-                    amenity.setId(amenityId);
-                    return amenity;
-                }).collect(Collectors.toList()) : new ArrayList<>();
+    private void validateAmenities(List<AmenityDto> amenities) {
+        if (amenities != null) {
+            List<UUID> amenityIds = amenities.stream()
+                    .map(AmenityDto::getId)
+                    .collect(Collectors.toList());
+
+            // Check if all amenities exist in the database
+            List<Amenity> existingAmenities = amenityRepository.findAllById(amenityIds);
+            if (existingAmenities.size() != amenityIds.size()) {
+                throw new ResourceNotFoundException("One or more amenities not found");
+            }
+        }
     }
 
+    private void updateAmenities(Hotel hotel, List<AmenityDto> amenityDtos) {
+        if (amenityDtos != null) {
+            List<UUID> amenityIds = amenityDtos.stream()
+                    .map(AmenityDto::getId)
+                    .collect(Collectors.toList());
+
+            List<Amenity> amenities = amenityRepository.findAllById(amenityIds);
+            hotel.setAmenities(amenities);
+        }
+    }
     private List<String> uploadExteriorImages(MultipartFile[] exteriorImages, HotelDto hotelDto) {
         List<String> exteriorImageUrls = new ArrayList<>();
-        if(hotelDto.getId() != null){
+        if (hotelDto.getId() != null) {
             HotelDto hotelDtoTemp = getHotelById(hotelDto.getId());
-            // Lấy danh sách các URL ảnh cũ từ hotelDto
-            List<String> oldImageUrls = hotelDtoTemp.getExteriorImages(); // Giả sử hotelDto có phương thức này
-            if (oldImageUrls != null) { // Kiểm tra xem oldImageUrls có phải là null không
-                // Xóa các ảnh cũ trước khi tải ảnh mới lên
-                for (String oldImageUrl : oldImageUrls) {
-                    amazonS3Service.deleteFile(oldImageUrl); // Xóa ảnh cũ
-                }
+            List<String> oldImageUrls = hotelDtoTemp.getExteriorImages();
+            if (oldImageUrls != null) {
+                oldImageUrls.forEach(amazonS3Service::deleteFile);
             }
         }
 
         if (exteriorImages != null) {
-            // Tải ảnh mới lên
             for (MultipartFile exteriorImage : exteriorImages) {
                 if (!exteriorImage.isEmpty()) {
                     String uniqueFileName = createUniqueFileName(hotelDto.getName());
@@ -247,9 +306,9 @@ public class HotelServiceImpl implements HotelService {
     }
 
     private void validatePaymentPolicy(PaymentPolicy paymentPolicy) {
-        if (paymentPolicy == null ||
-                (!paymentPolicy.equals(PaymentPolicy.ONLINE) && !paymentPolicy.equals(PaymentPolicy.CHECKOUT))) {
-            throw new IllegalArgumentException("Invalid payment policy. It must be either 'ONLINE' or 'CHECKOUT'.");
+        if (paymentPolicy == null || (!paymentPolicy.equals(PaymentPolicy.ONLINE) &&
+                !paymentPolicy.equals(PaymentPolicy.CHECKOUT) && !paymentPolicy.equals(PaymentPolicy.ONLINE_CHECKOUT))) {
+            throw new IllegalArgumentException("Invalid payment policy. It must be either 'ONLINE' or 'CHECKOUT' or both.");
         }
     }
 

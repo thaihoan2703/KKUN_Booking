@@ -25,17 +25,19 @@ public class RoomReview extends Review {
     private int amenities;
     private int space;
     private int comfort;
+    private int valueForMoney;
 
     @Override
     public double calculateOverallRating() {
-        return (cleanliness + amenities + space + comfort) / 4.0;
+        return (cleanliness + amenities + space + comfort + valueForMoney) / 5.0;
     }
 
-    public void updateRatings(int cleanliness, int amenities, int space, int comfort) {
+    public void updateRatings(int cleanliness, int amenities, int space, int comfort, int valueForMoney) {
         this.cleanliness = cleanliness;
         this.amenities = amenities;
         this.space = space;
         this.comfort = comfort;
+        this.valueForMoney = valueForMoney;
         updateOverallRating();
     }
 }
