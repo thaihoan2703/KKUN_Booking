@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.dto;
 
+import com.backend.KKUN_Booking.model.Hotel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,10 +12,10 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 public class HotelSearchResultDto {
-    private UUID id;
-    private String name;
+    private HotelDto hotelDto;
     private double lowestPrice;
     private int availableRooms;
     private double popularityScore;
-    private List<NearbyPlaceDto> nearbyPlaces;
+
+    private RoomDto mostBookedRoom;
 }

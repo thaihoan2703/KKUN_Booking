@@ -23,7 +23,7 @@ public class HotelDto {
     private List<String> roomImages;
     private List<RoomDto> rooms;  // List of room details
     private List<UUID> amenityIds;
-
+    private int numOfReviews;
     public String getCategoryDisplayName() {
         return category != null ? category.getDisplayName() : null;
     }

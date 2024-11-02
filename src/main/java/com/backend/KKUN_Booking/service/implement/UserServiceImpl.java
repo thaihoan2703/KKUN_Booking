@@ -16,6 +16,7 @@ import com.backend.KKUN_Booking.model.enumModel.UserStatus;
 import com.backend.KKUN_Booking.repository.RoleRepository;
 import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.security.UserDetailsImpl;
+import com.backend.KKUN_Booking.service.AmazonS3Service;
 import com.backend.KKUN_Booking.service.UserService;
 import com.backend.KKUN_Booking.util.*;
 import jakarta.transaction.Transactional;
@@ -27,6 +28,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,14 +47,19 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private RoleRepository roleRepository; // Inject your role repository here
     @Autowired
     private PasswordEncoder passwordEncoder; // Inject your password encoder here
+    private final AmazonS3Service amazonS3Service;
 
     private final int MAX_RECENT_SEARCHES = 10;
     private final int MAX_SAVED_HOTELS = 20;
 
+    public UserServiceImpl(AmazonS3Service amazonS3Service) {
+        this.amazonS3Service = amazonS3Service;
+    }
+
     @Override
     public UserDto createUser(UserDto userDto) {
         if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-            throw new UserAlreadyExistsException("Email already in use");
+            throw new UserAlreadyExistsException("Email này đã tồn tai");
         }
 
         // Proceed with user creation
@@ -84,12 +91,17 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public UserDto updateUser(UUID id, UserDto userDto) {
+    public UserDto updateUser(UUID id, UserDto userDto, MultipartFile profileImage) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        updateUserFromDto(user, userDto);
-        user = userRepository.save(user);
-        return convertToDto(user);
+
+        try {
+            updateUserFromDto(user, userDto, profileImage);
+            user = userRepository.save(user);
+            return convertToDto(user);
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException("Invalid user type for update", e);
+        }
     }
 
     @Override
@@ -124,6 +136,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setEmail(userDto.getEmail());
         user.setAlias(CommonFunction.generateAlias(userDto.getFirstName(),userDto.getLastName()));
         user.setStatus(UserStatus.ACTIVE);
+        user.setAddress(userDto.getAddress());
+        user.setPhone(userDto.getPhone());
         user.setRole(role);
 
         // Hash the password (use your preferred method)
@@ -132,6 +146,22 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
         return user;
     }
+
+    private String saveProfileImage(UserDto userDto,MultipartFile profileImage){
+        String s3ImageUrl="";
+        if (profileImage != null ) {
+            if(userDto.getId() != null){
+                String profileImageOld = userDto.getAvatar();
+                if(profileImageOld != null){
+                    amazonS3Service.deleteFile(profileImageOld);
+                }
+                String uniqueFileName = CommonFunction.SEOUrl(userDto.getEmail()) + "-" + userDto.getId();
+                s3ImageUrl = amazonS3Service.uploadAvatarUserFile(profileImage, uniqueFileName);
+
+            }
+        }
+        return s3ImageUrl;
+    };
 
     private UserDto convertToDto(User user) {
         UserDto userDto;
@@ -170,22 +200,48 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         userDto.setLastName(user.getLastName());
         userDto.setEmail(user.getEmail());
         userDto.setAlias(user.getAlias());
+        userDto.setPhone(user.getPhone());
+        userDto.setAddress(user.getAddress());
+        userDto.setAvatar(user.getAvatar());
         userDto.setCreatedDate(user.getCreatedDate());
         userDto.setStatus(user.getStatus());
         userDto.setRoleId(user.getRole() != null ? user.getRole().getId() : null);
         userDto.setPassword(user.getPassword());
+        userDto.setHasPassword(user.getPassword() != null && !user.getPassword().isEmpty());
+        userDto.setAuthProvider(user.getAuthProvider());
         return userDto;
     }
 
-    private void updateUserFromDto(User user, UserDto userDto) {
-        user.setFirstName(userDto.getFirstName());
-        user.setLastName(userDto.getLastName());
-        user.setEmail(userDto.getEmail());
-        user.setAlias(userDto.getAlias());
+    private void updateUserFromDto(User user, UserDto userDto, MultipartFile profileImage) {
+        // Update common fields first
+        updateCommonFields(user, userDto, profileImage);
 
-        if (userDto.getStatus() != null) {
-            user.setStatus(userDto.getStatus());
+        // Then update type-specific fields
+        try {
+            if (user instanceof AdminUser && userDto instanceof AdminUserDto) {
+                updateAdminFields((AdminUser) user, (AdminUserDto) userDto);
+            } else if (user instanceof CustomerUser && userDto instanceof CustomerUserDto) {
+                updateCustomerFields((CustomerUser) user, (CustomerUserDto) userDto);
+            } else if (user instanceof HotelOwnerUser && userDto instanceof HotelOwnerUserDto) {
+                updateHotelOwnerFields((HotelOwnerUser) user, (HotelOwnerUserDto) userDto);
+            }
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException("Invalid user type combination", e);
         }
+    }
+    private void updateCommonFields(User user, UserDto userDto, MultipartFile profileImage) {
+        if (userDto.getFirstName() != null) user.setFirstName(userDto.getFirstName());
+        if (userDto.getLastName() != null) user.setLastName(userDto.getLastName());
+        if (userDto.getAlias() != null) user.setAlias(userDto.getAlias());
+        if (userDto.getAddress() != null) user.setAddress(userDto.getAddress());
+        if (userDto.getPhone() != null) user.setPhone(userDto.getPhone());
+
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String imagePath = saveProfileImage(userDto, profileImage);
+            user.setAvatar(imagePath);
+        }
+
+        if (userDto.getStatus() != null) user.setStatus(userDto.getStatus());
 
         if (userDto.getRoleId() != null) {
             Role role = roleRepository.findById(userDto.getRoleId())
@@ -193,23 +249,21 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             user.setRole(role);
         }
 
-        // Update specific fields based on user type
-        if (user instanceof AdminUser && userDto instanceof AdminUserDto) {
-            AdminUser adminUser = (AdminUser) user;
-            AdminUserDto adminUserDto = (AdminUserDto) userDto;
-            adminUser.setManagedSections(adminUserDto.getManagedSections());
-            adminUser.setActionCount(adminUserDto.getActionCount());
-        } else if (user instanceof CustomerUser && userDto instanceof CustomerUserDto) {
-            CustomerUser customerUser = (CustomerUser) user;
-            CustomerUserDto customerUserDto = (CustomerUserDto) userDto;
-            // Update customer specific fields if necessary
-        } else if (user instanceof HotelOwnerUser && userDto instanceof HotelOwnerUserDto) {
-            HotelOwnerUser hotelOwnerUser = (HotelOwnerUser) user;
-            HotelOwnerUserDto hotelOwnerUserDto = (HotelOwnerUserDto) userDto;
-            // Update hotel owner specific fields if necessary
+        if (userDto.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
         }
     }
+    private void updateAdminFields(AdminUser user, AdminUserDto dto) {
 
+    }
+
+    private void updateCustomerFields(CustomerUser user, CustomerUserDto dto) {
+        // Update customer specific fields
+    }
+
+    private void updateHotelOwnerFields(HotelOwnerUser user, HotelOwnerUserDto dto) {
+        // Update hotel owner specific fields
+    }
     @Override
     public User findOrSaveOauthUser(String email, String name) {
         // Tìm kiếm người dùng bằng email
@@ -220,7 +274,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             return optionalUser.get();
         } else {
             // Nếu người dùng chưa tồn tại, tạo người dùng mới
-            User newUser = new User();
+            User newUser = new CustomerUser();
             newUser.setEmail(email);
             newUser.setFirstName(name); // Lưu tên hoặc bạn có thể tách họ và tên riêng ra
             newUser.setAuthProvider(AuthProvider.GOOGLE); // Đặt kiểu xác thực là Google
@@ -236,6 +290,38 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             return userRepository.save(newUser);
         }
     }
+
+    @Override
+    public void changePassword(UUID userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // Kiểm tra nếu người dùng đã đăng nhập bằng OAuth (Google, Facebook, v.v.)
+        if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+            // Nếu là tài khoản Google và chưa bao giờ thiết lập mật khẩu trước đó
+            if (user.getPassword() == null || user.getPassword().isEmpty()) {
+                // Người dùng không có mật khẩu ban đầu, cho phép thiết lập mật khẩu mới
+                user.setPassword(passwordEncoder.encode(newPassword));
+                userRepository.save(user);
+                return;
+            } else {
+                // Nếu là tài khoản Google và đã có mật khẩu trước đó, yêu cầu mật khẩu cũ
+                if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+                    throw new IllegalArgumentException("Mật khẩu cũ không chính xác");
+                }
+            }
+        } else {
+            // Nếu là người dùng thông thường, kiểm tra mật khẩu cũ
+            if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+                throw new IllegalArgumentException("Mật khẩu cũ không chính xác");
+            }
+        }
+
+        // Mã hóa và cập nhật mật khẩu mới
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
 
 
     @Override

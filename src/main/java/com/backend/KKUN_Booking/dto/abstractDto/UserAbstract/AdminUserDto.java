@@ -16,4 +16,5 @@ public class AdminUserDto extends UserDto {
     // Các thuộc tính đặc biệt cho admin
     private List<String> managedSections;
     private int actionCount;
+
 }
