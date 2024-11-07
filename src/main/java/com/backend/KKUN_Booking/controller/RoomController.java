@@ -58,4 +58,10 @@ public class RoomController {
         roomService.deleteRoom(id);
         return ResponseEntity.noContent().build(); // Trả về 204 No Content khi xóa thành công
     }
+
+    @GetMapping("hotel/{hotelId}")
+    public ResponseEntity<?> getRoomsByHotelId(@PathVariable UUID hotelId){
+        List<RoomDto> rooms = roomService.getRoomsByHotelId(hotelId);
+        return ResponseEntity.ok(rooms); // Trả về danh sách phòng với trạng thái 200 OK
+    }
 }

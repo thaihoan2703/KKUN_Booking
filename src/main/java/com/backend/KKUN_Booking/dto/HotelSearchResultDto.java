@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class HotelSearchResultDto {
     private HotelDto hotelDto;
-    private double lowestPrice;
+    private BigDecimal lowestPrice;
     private int availableRooms;
     private double popularityScore;
 

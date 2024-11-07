@@ -16,7 +16,7 @@ public class NotificationService {
 
     private final JavaMailSender emailSender;
 
-    @Value("${BASE_URL}") // Tiêm giá trị từ local.env
+    @Value("${UI_WEBSITE_URL}") // Tiêm giá trị từ local.env
     private String baseUrl;
     @Autowired
     public NotificationService(JavaMailSender emailSender) {
@@ -30,7 +30,7 @@ public class NotificationService {
         helper.setTo(user.getEmail());
         helper.setSubject("Reminder: Please review your recent stay");
 
-        String link = baseUrl + "/bookings/" + booking.getId(); // Đường dẫn đến trang đánh giá
+        String link = baseUrl + "/rooms/" + booking.getRoom().getId() + "/bookings/" + booking.getId() + "/review"; // Đường dẫn đến trang đánh giá
         String emailContent = "<p>Dear " + user.getLastName() + ",</p>" +
                 "<p>We hope you enjoyed your recent stay at our hotel. " +
                 "We would greatly appreciate if you could take a moment to review your experience. " +

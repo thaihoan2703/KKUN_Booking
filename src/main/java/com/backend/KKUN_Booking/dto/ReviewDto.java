@@ -21,6 +21,6 @@ public abstract class ReviewDto {
     private String comment;
     private LocalDateTime date;
     private double overallRating;
-    private UUID userId;
+    private UserDto user;
 }
 

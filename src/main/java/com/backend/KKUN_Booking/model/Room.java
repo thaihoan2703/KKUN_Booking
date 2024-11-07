@@ -1,12 +1,14 @@
 package com.backend.KKUN_Booking.model;
 
 import com.backend.KKUN_Booking.converter.StringListConverter;
+import com.backend.KKUN_Booking.model.enumModel.BedType;
 import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,8 +25,12 @@ public class Room {
     @Enumerated(EnumType.STRING)
     private RoomType type;
     private Integer capacity;
-    private Double basePrice;
+    private BigDecimal basePrice;
     private Boolean available;
+    @Enumerated(EnumType.STRING)
+    private BedType bedType;  // Loại giường
+    private Integer bedCount; // Số lượng giường
+    private Double area;
 
     @Convert(converter = StringListConverter.class)
     @Column(name = "room_images", columnDefinition = "TEXT") // Lưu dưới dạng TEXT

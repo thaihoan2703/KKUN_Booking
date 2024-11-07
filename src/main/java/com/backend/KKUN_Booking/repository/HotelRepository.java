@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -42,5 +43,6 @@ public interface HotelRepository extends JpaRepository<Hotel, UUID> {
             "ORDER BY booking_count DESC " +
             "LIMIT :limit", nativeQuery = true)
     List<Hotel> findTrendingDestinations(@Param("limit") int limit);
+    Optional<Hotel> findByOwnerId(UUID ownerId);
 }
 

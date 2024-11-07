@@ -97,7 +97,6 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
         payment.setStatus(status);
         payment.getBooking().setStatus(BookingStatus.CONFIRMED);
-        payment.getBooking().setCheckoutDate(LocalDateTime.now());
 
         // Lưu lại trang thai thanh toán và booking
         paymentRepository.save(payment);

@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.service.implement;
 
+import com.backend.KKUN_Booking.dto.AmenityDto;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.UserDto;
 import com.backend.KKUN_Booking.model.Hotel;
@@ -64,16 +65,14 @@ public class RecommendationServiceImpl implements RecommendationService {
             score += 2.0;
         }
 
-        // Check preferred amenities (you may need to retrieve actual amenities based on amenityIds)
-        List<String> hotelAmenities = amenityService.getAmenitiesByIds(hotelDto.getAmenityIds()); // Assuming you have a service to fetch amenities
-        score += user.getPreferredAmenities().stream()
-                .filter(amenity -> hotelAmenities.contains(amenity))
-                .count() * 0.5;
+        // Check preferred amenities using the new AmenityDto structure
+        List<String> hotelAmenityNames = hotelDto.getAmenities().stream()
+                .map(AmenityDto::getName)
+                .collect(Collectors.toList());
 
-        // Check travel style
-        // if (user.getTravelStyle().equalsIgnoreCase(hotel.getStyle())) {
-        //     score += 1.5;
-        // }
+        score += user.getPreferredAmenities().stream()
+                .filter(preferredAmenity -> hotelAmenityNames.contains(preferredAmenity))
+                .count() * 0.5;
 
         // Check recent searches
         List<String> recentSearches = userService.getRecentSearches(user.getId());
@@ -103,4 +102,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         // based on recent bookings, seasonal popularity, etc.
         return hotelService.findTrendingDestinations(10);
     }
+
+
 }

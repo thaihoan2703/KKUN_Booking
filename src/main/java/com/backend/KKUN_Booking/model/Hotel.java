@@ -26,6 +26,8 @@ public class Hotel {
     private HotelCategory category;
     private Double rating;
     private String location;
+    @Column(length = 1000)
+    private String description;
 
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")

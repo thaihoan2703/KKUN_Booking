@@ -1,10 +1,7 @@
 package com.backend.KKUN_Booking.service.implement;
 
 import com.backend.KKUN_Booking.dto.*;
-import com.backend.KKUN_Booking.model.Amenity;
-import com.backend.KKUN_Booking.model.Hotel;
-import com.backend.KKUN_Booking.model.Room;
-import com.backend.KKUN_Booking.model.User;
+import com.backend.KKUN_Booking.model.*;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.RoomRepository;
@@ -18,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -76,7 +74,8 @@ public class SearchServiceImpl implements SearchService {
                 .map(hotel -> {
                     List<Room> suitableRooms = roomRepository.findAvailableRoomsByHotelAndDateRange(hotel.getId(), checkInDate, checkOutDate)
                             .stream()
-                            .filter(room -> room.getCapacity() >= guests)
+                            .filter(room -> room.getCapacity() >= guests) // Lọc các phòng có capacity >= guests
+                            .sorted(Comparator.comparingInt(room -> Math.abs(room.getCapacity() - guests))) // Sắp xếp theo sự chênh lệch
                             .collect(Collectors.toList());
 
                     if (!suitableRooms.isEmpty()) {
@@ -121,21 +120,24 @@ public class SearchServiceImpl implements SearchService {
                             hotelDto.setCategory(hotel.getCategory());
                             hotelDto.setRating(hotel.getRating());
                             hotelDto.setLocation(hotel.getLocation());
+                            hotelDto.setNumOfReviews(hotel.getNumOfReviews());
+
                             hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
                             hotelDto.setExteriorImages(hotel.getExteriorImages());
                             hotelDto.setRoomImages(hotel.getRoomImages());
-                            hotelDto.setAmenityIds(hotel.getAmenities().stream()
-                                    .map(Amenity::getId)
+                            // Convert amenities to AmenityDto list
+                            hotelDto.setAmenities(hotel.getAmenities().stream()
+                                    .map(this::convertAmenityToDto)
                                     .collect(Collectors.toList()));
 
                             // Convert best room to RoomDto
                             RoomDto bestRoomDto = mapRoomToRoomDto(bestRoom);
 
                             // Tìm giá thấp nhất từ suitableRooms (có thể khác với bestRoom)
-                            double lowestPrice = suitableRooms.stream()
-                                    .mapToDouble(Room::getBasePrice)
-                                    .min()
-                                    .orElse(Double.MAX_VALUE);
+                            BigDecimal lowestPrice = suitableRooms.stream()
+                                    .map(Room::getBasePrice)
+                                    .min(Comparator.naturalOrder())
+                                    .orElse(BigDecimal.valueOf(Double.MAX_VALUE));
 
                             return new HotelSearchResultDto(
                                     hotelDto,
@@ -163,11 +165,27 @@ public class SearchServiceImpl implements SearchService {
         roomDto.setBasePrice(room.getBasePrice());
         roomDto.setAvailable(room.getAvailable());
         roomDto.setRoomImages(room.getRoomImages());
-        roomDto.setAmenityIds(room.getAmenities().stream().map(Amenity::getId).collect(Collectors.toList()));
+
+        // Thay vì chỉ lấy ID, chúng ta chuyển đổi toàn bộ Amenity sang AmenityDto
+        List<AmenityDto> amenityDtos = room.getAmenities().stream()
+                .map(this::convertToAmenityDto)
+                .collect(Collectors.toList());
+        roomDto.setAmenities(amenityDtos);
+
+        // Đếm số lượng đánh giá từ các lượt đặt phòng đã được đánh giá
         roomDto.setNumOfReviews((int) room.getBookings().stream()
-                .filter(booking -> booking.isReviewed()) // Chỉ đếm booking có reviewed = true
-                .count()); // Lưu số lượt đặt phòng
+                .filter(Booking::isReviewed)
+                .count());
+
         return roomDto;
+    }
+
+    // Hàm chuyển đổi từ Amenity sang AmenityDto
+    private AmenityDto convertToAmenityDto(Amenity amenity) {
+        AmenityDto amenityDto = new AmenityDto();
+        amenityDto.setId(amenity.getId());
+        amenityDto.setName(amenity.getName());
+        return amenityDto;
     }
 
 
@@ -214,5 +232,13 @@ public class SearchServiceImpl implements SearchService {
 
         // Cap the score at 10
         return Math.min(popularityScore, 10.0);
+    }
+
+    private AmenityDto convertAmenityToDto(Amenity amenity) {
+        AmenityDto amenityDto = new AmenityDto();
+        amenityDto.setId(amenity.getId());
+        amenityDto.setName(amenity.getName());
+        amenityDto.setDescription(amenity.getDescription());
+        return amenityDto;
     }
 }

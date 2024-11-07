@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -59,12 +60,27 @@ public class WebSecurityConfig {
                 .cors().and()
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/", "/api/**", "/api/auth/**","/api/auth/login","/api/auth/register", "/oauth2/**").permitAll()
-                        .requestMatchers("/admin/**",  "/api/roles/**").hasAnyAuthority(RoleUser.ADMIN.name())
-                        .requestMatchers("/api/hotels**", "/api/rooms/**","/api/payments/**","/api/amenities/**").hasAuthority(RoleUser.HOTELOWNER.name())
-                        .requestMatchers("/api/wishlist/**","/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
-                        .requestMatchers("/@**/settings","/api/users/*/change-password").authenticated()
-                        .anyRequest().authenticated())
+                        // Những route cho phép truy cập chung
+                        .requestMatchers(HttpMethod.GET, "/api/search/**","/api/bookings/{id}","/api/users/*", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers("/", "/api/auth/**", "/api/auth/google", "/api/auth/login", "/api/auth/register", "/oauth2/**").permitAll()
+
+                        // Những route yêu cầu quyền quản trị
+                        .requestMatchers("/admin/**", "/api/roles/**").hasAuthority(RoleUser.ADMIN.name())
+
+                        // Route đặc quyền khách hàng
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.CUSTOMER.name())
+
+                        // Những route khác cho RoleUser.HOTELOWNER và RoleUser.CUSTOMER
+                        .requestMatchers(HttpMethod.POST, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/users/*", "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers("/api/wishlist/**", "/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
+
+                        // Đảm bảo các quyền còn lại là xác thực
+                        .anyRequest().authenticated()
+                )
+
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
@@ -75,25 +91,26 @@ public class WebSecurityConfig {
                         .defaultSuccessUrl("/", true)
                         .failureUrl("/login?error")
                         .permitAll())
-                .oauth2Login(oauth2Login ->
-                        oauth2Login
-                                .userInfoEndpoint(userInfoEndpoint ->
-                                        userInfoEndpoint.userService(oAuthService))
-                                .successHandler((request, response, authentication) -> {
-                                    DefaultOidcUser oidcUser = (DefaultOidcUser) authentication.getPrincipal();
-                                    String email = oidcUser.getEmail();
+                .oauth2Login(oauth2Login -> oauth2Login
+                        .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint.userService(oAuthService))
+                        .successHandler((request, response, authentication) -> {
+                            // Lấy thông tin từ OIDC user
+                            DefaultOidcUser oidcUser = (DefaultOidcUser) authentication.getPrincipal();
+                            String email = oidcUser.getEmail();
 
-                                    // Lưu người dùng nếu chưa tồn tại
-                                    User user = userService.findOrSaveOauthUser(email, oidcUser.getFullName());
+                            // Lưu người dùng nếu chưa tồn tại
+                            User user = userService.findOrSaveOauthUser(email, oidcUser.getFullName());
 
-                                    // Tạo JWT token
-                                    Authentication auth = new UsernamePasswordAuthenticationToken(
-                                            user, null, user.getAuthorities());
-                                    String jwtToken = tokenProvider.generateToken(auth);
+                            // Tạo JWT token
+                            Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                            String jwtToken = tokenProvider.generateAccessToken(auth);
 
-                                    // Trả về JWT token trong body hoặc header
-                                    response.addHeader("Authorization", "Bearer " + jwtToken);
-                                })
+                            // Trả về JWT token trong response body
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            String json = String.format("{\"accessToken\": \"%s\"}", jwtToken);
+                            response.getWriter().write(json);
+                        })
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")

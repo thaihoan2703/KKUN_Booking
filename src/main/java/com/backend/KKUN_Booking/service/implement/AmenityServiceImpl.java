@@ -65,6 +65,7 @@ public class AmenityServiceImpl implements AmenityService {
         amenityDto.setId(amenity.getId());
         amenityDto.setName(amenity.getName());
         amenityDto.setDescription(amenity.getDescription());
+        amenityDto.setAmenityType(amenity.getAmenityType());
         return amenityDto;
     }
 
@@ -74,6 +75,8 @@ public class AmenityServiceImpl implements AmenityService {
         amenity.setId(amenityDto.getId());
         amenity.setName(amenityDto.getName());
         amenity.setDescription(amenityDto.getDescription());
+        amenity.setAmenityType(amenityDto.getAmenityType());
+
         return amenity;
     }
 

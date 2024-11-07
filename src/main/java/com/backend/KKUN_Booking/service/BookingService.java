@@ -21,5 +21,8 @@ public interface BookingService {
     void updateBookingStatus(UUID bookingId, BookingStatus status);
     void markBookingAsReviewed(UUID bookingId);
     List<Booking> getCompletedBookingsWithoutReview();
+    List<BookingDto> getBookingHistory(String userEmail);
+    List<BookingDto> getHotelBookingHistory(String userEmail);
+
 }
 

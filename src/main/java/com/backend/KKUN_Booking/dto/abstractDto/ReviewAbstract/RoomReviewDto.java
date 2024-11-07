@@ -16,4 +16,5 @@ public class RoomReviewDto extends ReviewDto {
     private int amenities;
     private int space;
     private int comfort;
+    private int valueForMoney;
 }

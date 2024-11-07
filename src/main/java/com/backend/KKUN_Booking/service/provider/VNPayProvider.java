@@ -9,6 +9,7 @@ import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.util.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,9 +26,10 @@ public class VNPayProvider extends PaymentProvider {
     @Override
     public PaymentResponse.BaseResponse initiatePayment(PaymentDto paymentDto) {
         // Implement VNPay-specific payment initiation
-        long amount = (long) (paymentDto.getAmount() * 100L);
+        BigDecimal amount = paymentDto.getAmount().multiply(BigDecimal.valueOf(100L));
+        long amountInLong = amount.longValue();
         Map<String, String> vnpParamsMap = vnPayConfig.getVNPayConfig();
-        vnpParamsMap.put("vnp_Amount", String.valueOf(amount));
+        vnpParamsMap.put("vnp_Amount", String.valueOf(amountInLong));
 
         String bankCode = request.getParameter("bankCode");
         // Only add bank code if it's provided in the PaymentDto
@@ -49,7 +51,7 @@ public class VNPayProvider extends PaymentProvider {
         String transactionReference = vnpParamsMap.get("vnp_TxnRef") + vnpParamsMap.get("vnp_Amount") + vnpParamsMap.get("vnp_OrderInfo");
         paymentDto.setTransactionReference(VNPayUtil.hmacSHA512(vnPayConfig.getSecretKey(), transactionReference));
         return PaymentResponse.BaseResponse.builder()
-                .code("ok")
+                .code("200")
                 .message("success")
                 .paymentUrl(paymentUrl)
                 .build();

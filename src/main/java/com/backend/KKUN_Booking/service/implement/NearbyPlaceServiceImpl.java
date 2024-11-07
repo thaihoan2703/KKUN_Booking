@@ -212,14 +212,10 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
             case "zoo": return "Zoo";
             case "aquarium": return "Aquarium";
             case "theatre": return "Theatre";
-            case "kindergarten": return "Kindergarten";
-//            case "college": return "College";
-//            case "university": return "University";
+
             case "nightclub": return "Nightclub";
             case "spa": return "Spa";
             case "veterinary": return "Veterinary Clinic";
-            case "community_centre": return "Community Centre";
-            case "place_of_worship": return "Worship";
             default: return null;
         }
     }
