@@ -61,25 +61,31 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
                         // Những route cho phép truy cập chung
-                        .requestMatchers(HttpMethod.GET, "/api/search/**","/api/bookings/{id}","/api/users/*", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**", "/api/recommendations/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/search/**", "/api/bookings/{id}", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**","/api/reviews/rooms/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/search/**", "/api/recommendations/**","/api/chat/**").permitAll()
                         .requestMatchers("/", "/api/auth/**", "/api/auth/google", "/api/auth/login", "/api/auth/register", "/oauth2/**").permitAll()
 
-                        // Những route yêu cầu quyền quản trị
-                        .requestMatchers("/admin/**", "/api/roles/**").hasAuthority(RoleUser.ADMIN.name())
+                        // Route `/api/users/me` cho phép tất cả vai trò cập nhật thông tin cá nhân
+                        .requestMatchers(HttpMethod.PUT, "/api/users/me").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
 
-                        // Route đặc quyền khách hàng
-                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.CUSTOMER.name())
+                        // Những route yêu cầu quyền quản trị - ADMIN
+                        .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/roles/**").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.ADMIN.name()) // Cho phép ADMIN quản lý mọi người dùng
 
-                        // Những route khác cho RoleUser.HOTELOWNER và RoleUser.CUSTOMER
+                        // Những route khác cho RoleUser.HOTELOWNER
                         .requestMatchers(HttpMethod.POST, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
-                        .requestMatchers(HttpMethod.PUT, "/api/users/*", "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+
+                        // Route đặc quyền khách hàng - CUSTOMER
+                        .requestMatchers(HttpMethod.GET, "/api/users/booking-hotel/history").hasAuthority(RoleUser.CUSTOMER.name())
                         .requestMatchers("/api/wishlist/**", "/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
 
                         // Đảm bảo các quyền còn lại là xác thực
                         .anyRequest().authenticated()
                 )
+
 
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
@@ -153,7 +159,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000"));
+        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5005"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowCredentials(true); // If you need to allow credentials like cookies

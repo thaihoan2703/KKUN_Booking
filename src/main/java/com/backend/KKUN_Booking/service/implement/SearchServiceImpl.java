@@ -72,88 +72,94 @@ public class SearchServiceImpl implements SearchService {
 
         return hotels.stream()
                 .map(hotel -> {
+                    // Lọc các phòng phù hợp với số lượng khách (`capacity >= guests`)
                     List<Room> suitableRooms = roomRepository.findAvailableRoomsByHotelAndDateRange(hotel.getId(), checkInDate, checkOutDate)
                             .stream()
-                            .filter(room -> room.getCapacity() >= guests) // Lọc các phòng có capacity >= guests
-                            .sorted(Comparator.comparingInt(room -> Math.abs(room.getCapacity() - guests))) // Sắp xếp theo sự chênh lệch
+                            .filter(room -> room.getCapacity() >= guests)
                             .collect(Collectors.toList());
 
-                    if (!suitableRooms.isEmpty()) {
-                        // Tìm các phòng có booking với reviewed = true
-                        List<Room> reviewedRooms = suitableRooms.stream()
-                                .filter(room -> room.getBookings().stream()
-                                        .anyMatch(booking -> booking.isReviewed())
-                                )
-                                .collect(Collectors.toList());
-
-                        Room bestRoom;
-                        if (!reviewedRooms.isEmpty()) {
-                            // Nếu có phòng nào có booking được review, tìm phòng tốt nhất trong số này
-                            bestRoom = reviewedRooms.stream()
-                                    .max(Comparator.comparingDouble(room -> {
-                                        long reviewedBookingsCount = room.getBookings().stream()
-                                                .filter(booking -> booking.isReviewed())
-                                                .count();
-                                        double averageRating = room.getAverageRating();
-
-                                        // Normalize reviewed bookings count (assuming max 100 reviewed bookings)
-                                        double normalizedBookings = Math.min(reviewedBookingsCount / 100.0, 1.0);
-                                        // Rating is already normalized (0-5 scale)
-                                        double normalizedRating = averageRating / 5.0;
-
-                                        // Combined score gives equal weight to reviewed bookings and ratings
-                                        return (normalizedBookings * 0.5) + (normalizedRating * 0.5);
-                                    }))
-                                    .orElse(null);
-                        } else {
-                            // Nếu không có phòng nào có booking được review, trả về một phòng bất kỳ của khách sạn
-                            bestRoom = suitableRooms.get(0);
-                        }
-
-                        if (bestRoom != null) {
-
-
-                            // Map Hotel to HotelDto
-                            HotelDto hotelDto = new HotelDto();
-                            hotelDto.setId(hotel.getId());
-                            hotelDto.setName(hotel.getName());
-                            hotelDto.setCategory(hotel.getCategory());
-                            hotelDto.setRating(hotel.getRating());
-                            hotelDto.setLocation(hotel.getLocation());
-                            hotelDto.setNumOfReviews(hotel.getNumOfReviews());
-
-                            hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
-                            hotelDto.setExteriorImages(hotel.getExteriorImages());
-                            hotelDto.setRoomImages(hotel.getRoomImages());
-                            // Convert amenities to AmenityDto list
-                            hotelDto.setAmenities(hotel.getAmenities().stream()
-                                    .map(this::convertAmenityToDto)
-                                    .collect(Collectors.toList()));
-
-                            // Convert best room to RoomDto
-                            RoomDto bestRoomDto = mapRoomToRoomDto(bestRoom);
-
-                            // Tìm giá thấp nhất từ suitableRooms (có thể khác với bestRoom)
-                            BigDecimal lowestPrice = suitableRooms.stream()
-                                    .map(Room::getBasePrice)
-                                    .min(Comparator.naturalOrder())
-                                    .orElse(BigDecimal.valueOf(Double.MAX_VALUE));
-
-                            return new HotelSearchResultDto(
-                                    hotelDto,
-                                    lowestPrice,
-                                    1,
-                                    calculatePopularityScore(hotel),
-
-                                    bestRoomDto
-                            );
-                        }
+                    if (suitableRooms.isEmpty()) {
+                        return null; // Nếu không có phòng nào phù hợp, bỏ qua khách sạn này
                     }
-                    return null;
+
+                    // Tìm `suitabilityScore` thấp nhất giữa các phòng có `capacity` phù hợp
+                    int minSuitabilityScore = suitableRooms.stream()
+                            .mapToInt(room -> Math.abs(room.getCapacity() - guests))
+                            .min()
+                            .orElse(Integer.MAX_VALUE);
+
+                    // Lọc các phòng có `suitabilityScore` bằng `minSuitabilityScore`
+                    List<Room> bestCapacityRooms = suitableRooms.stream()
+                            .filter(room -> Math.abs(room.getCapacity() - guests) == minSuitabilityScore)
+                            .collect(Collectors.toList());
+
+                    Room bestRoom;
+                    if (bestCapacityRooms.size() == 1) {
+                        // Nếu chỉ có một phòng với `suitabilityScore` thấp nhất, chọn phòng đó
+                        bestRoom = bestCapacityRooms.get(0);
+                    } else {
+                        // Nếu có nhiều phòng với `suitabilityScore` thấp nhất, ưu tiên phòng có đánh giá tốt nhất
+                        bestRoom = bestCapacityRooms.stream()
+                                .max(Comparator.comparingDouble(room -> {
+                                    long reviewedBookingsCount = room.getBookings().stream()
+                                            .filter(Booking::isReviewed)
+                                            .count();
+                                    double averageRating = room.getAverageRating();
+
+                                    // Chuẩn hóa số lượng đánh giá đã review (giả sử tối đa là 100 review)
+                                    double normalizedBookings = Math.min(reviewedBookingsCount / 100.0, 1.0);
+                                    // Chuẩn hóa rating (trên thang điểm 0-5)
+                                    double normalizedRating = averageRating / 5.0;
+
+                                    // Tính điểm tổng hợp dựa trên số lượng review và rating trung bình
+                                    return (normalizedBookings * 0.5) + (normalizedRating * 0.5);
+                                }))
+                                .orElse(bestCapacityRooms.get(0)); // Nếu không có phòng nào được review, chọn phòng đầu tiên
+                    }
+
+                    // Tính `suitabilityScore` của phòng tốt nhất
+                    int suitabilityScore = Math.abs(bestRoom.getCapacity() - guests);
+
+                    // Map Hotel to HotelDto
+                    HotelDto hotelDto = new HotelDto();
+                    hotelDto.setId(hotel.getId());
+                    hotelDto.setName(hotel.getName());
+                    hotelDto.setCategory(hotel.getCategory());
+                    hotelDto.setRating(hotel.getRating());
+                    hotelDto.setLocation(hotel.getLocation());
+                    hotelDto.setNumOfReviews(hotel.getNumOfReviews());
+                    hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
+                    hotelDto.setExteriorImages(hotel.getExteriorImages());
+                    hotelDto.setRoomImages(hotel.getRoomImages());
+                    hotelDto.setAmenities(hotel.getAmenities().stream()
+                            .map(this::convertAmenityToDto)
+                            .collect(Collectors.toList()));
+
+                    // Convert `bestRoom` to `RoomDto`
+                    RoomDto bestRoomDto = mapRoomToRoomDto(bestRoom);
+
+                    // Tìm giá thấp nhất từ `suitableRooms` (có thể khác với `bestRoom`)
+                    BigDecimal lowestPrice = suitableRooms.stream()
+                            .map(Room::getBasePrice)
+                            .min(Comparator.naturalOrder())
+                            .orElse(BigDecimal.valueOf(Double.MAX_VALUE));
+
+                    // Trả về `HotelSearchResultDto` với `suitabilityScore`
+                    return new HotelSearchResultDto(
+                            hotelDto,
+                            lowestPrice,
+                            1,
+                            calculatePopularityScore(hotel),
+                            bestRoomDto,
+                            suitabilityScore
+                    );
                 })
                 .filter(result -> result != null)
-                .sorted((r1, r2) -> Double.compare(r2.getPopularityScore(), r1.getPopularityScore()))
+                .sorted(Comparator.comparingInt(HotelSearchResultDto::getSuitabilityScore) // Ưu tiên `suitabilityScore` trước
+                        .thenComparing(Comparator.comparingDouble(HotelSearchResultDto::getPopularityScore).reversed())) // Sau đó là `popularityScore`
                 .collect(Collectors.toList());
+
+
     }
 
     // Assuming you have a method to convert Room to RoomDto

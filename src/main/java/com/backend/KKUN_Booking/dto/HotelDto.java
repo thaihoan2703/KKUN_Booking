@@ -25,6 +25,7 @@ public class HotelDto {
     private List<RoomDto> rooms;  // List of room details
     private List<AmenityDto> amenities;
     private int numOfReviews;
+    private String ownerName;
     public String getCategoryDisplayName() {
         return category != null ? category.getDisplayName() : null;
     }

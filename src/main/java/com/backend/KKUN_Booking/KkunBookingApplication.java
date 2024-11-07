@@ -14,6 +14,8 @@ public class KkunBookingApplication {
 
 	public static void main(String[] args) {
 		Dotenv dotenv = Dotenv.configure().filename("local.env").load();
+		// Nạp các biến từ dotenv vào System properties
+		dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 		SpringApplication.run(KkunBookingApplication.class, args);
 	}
 

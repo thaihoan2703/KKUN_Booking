@@ -14,5 +14,10 @@ public class AmenityDto {
     private String description;
     private AmenityType amenityType;
     // Getters and Setters
+
+    // Phương thức để lấy displayName của amenityType
+    public String getAmenityTypeDisplayName() {
+        return amenityType != null ? amenityType.getDisplayName() : null;
+    }
 }
 

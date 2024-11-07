@@ -16,12 +16,10 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
     List<Room> findByHotelId(UUID hotelId);
     List<Room> findByAvailable(boolean available);
 
-    @Query("SELECT r FROM Room r WHERE r.hotel.id = :hotelId " +
-            "AND r.id NOT IN (" +
-            "    SELECT b.room.id FROM Booking b " +
-            "    WHERE b.room.hotel.id = :hotelId " +
-            "    AND ((b.checkinDate <= :checkoutDate AND b.checkoutDate >= :checkinDate) " +
-            "         OR (b.checkinDate >= :checkinDate AND b.checkinDate < :checkoutDate))" +
+    @Query("SELECT r FROM Room r WHERE r.hotel.id = :hotelId AND r.available = true " +
+            "AND NOT EXISTS (" +
+            "    SELECT b FROM Booking b WHERE b.room.id = r.id " +
+            "    AND (b.checkinDate < :checkoutDate AND b.checkoutDate > :checkinDate)" +
             ")")
     List<Room> findAvailableRoomsByHotelAndDateRange(
             @Param("hotelId") UUID hotelId,
