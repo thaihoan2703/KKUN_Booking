@@ -77,6 +77,73 @@ public class HotelServiceImpl implements HotelService {
         return convertToDto(hotelRepository.save(hotel));
     }
 
+    public HotelDto createHotelAndRooms(
+            HotelDto hotelDto,
+            MultipartFile[] exteriorImages,
+            MultipartFile[] roomImages,
+            String userEmail) {
+
+        // Tìm và xác minh người dùng
+        User user = findUserByEmail(userEmail);
+        validateUserAsHotelOwner(user);
+        ensureUserHasNoExistingHotel(user);
+        validatePaymentPolicy(hotelDto.getPaymentPolicy());
+        validateAmenities(hotelDto.getAmenities());
+
+        // Tải lên ảnh ngoại thất của khách sạn
+        List<String> exteriorImageUrls = uploadExteriorImages(exteriorImages, hotelDto);
+
+        // Chuyển đổi từ HotelDto sang đối tượng Hotel và thiết lập thông tin
+        Hotel hotel = convertToEntity(hotelDto);
+        hotel.setOwner(user);
+        hotel.setExteriorImages(exteriorImageUrls);
+
+        // Thiết lập danh sách tiện ích cho khách sạn
+        List<Amenity> amenities = convertAmenities(
+                hotelDto.getAmenities().stream().map(AmenityDto::getId).collect(Collectors.toList())
+        );
+        hotel.setAmenities(amenities);
+
+        // Xử lý và gán ảnh cho từng phòng trong danh sách Rooms
+        if (hotelDto.getRooms() != null && roomImages != null) {
+            List<Room> rooms = new ArrayList<>();
+            int imageIndex = 0; // Biến đếm để theo dõi vị trí trong mảng roomImages
+
+            for (RoomDto roomDto : hotelDto.getRooms()) {
+                Room room = convertRoomToEntity(roomDto);
+                room.setHotel(hotel);
+                room.setAvailable(true);
+
+                // Thêm tiện ích cho phòng
+                if (roomDto.getAmenities() != null) {
+                    List<Amenity> roomAmenities = convertAmenities(
+                            roomDto.getAmenities().stream().map(AmenityDto::getId).collect(Collectors.toList())
+                    );
+                    room.setAmenities(roomAmenities);
+                }
+
+                // Gán ảnh cho phòng nếu còn ảnh trong mảng roomImages
+                List<String> roomImageUrls = new ArrayList<>();
+                while (imageIndex < roomImages.length && roomImages[imageIndex] != null) {
+                    MultipartFile image = roomImages[imageIndex];
+                    if (!image.isEmpty()) {
+                        String uniqueFileName = createUniqueFileName(roomDto.getType().toString());
+                        String s3ImageUrl = amazonS3Service.uploadFile(image, uniqueFileName);
+                        roomImageUrls.add(s3ImageUrl);
+                    }
+                    imageIndex++; // Chuyển tới ảnh tiếp theo
+                }
+                room.setRoomImages(roomImageUrls);
+                rooms.add(room);
+            }
+            hotel.setRooms(rooms);
+        }
+
+        // Lưu khách sạn và trả về HotelDto
+        return convertToDto(hotelRepository.save(hotel));
+    }
+
+
     @Override
     public HotelDto updateHotel(UUID id, HotelDto hotelDto, MultipartFile[] newExteriorImages, String userEmail) {
         Hotel hotel = findHotelById(id);
@@ -140,19 +207,28 @@ public class HotelServiceImpl implements HotelService {
         hotelDto.setRating(hotel.getRating());
         hotelDto.setLocation(hotel.getLocation());
         hotelDto.setDescription(hotel.getDescription());
-        hotelDto.setExteriorImages(hotel.getExteriorImages());
-        hotelDto.setRoomImages(hotel.getRoomImages());
         hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
         hotelDto.setNumOfReviews(hotel.getNumOfReviews());
-        hotelDto.setAmenities(hotel.getAmenities().stream()
+        hotelDto.setOwnerName(hotel.getOwner().getFirstName() + " " + hotel.getOwner().getLastName());
+
+        // Thiết lập danh sách đường dẫn ảnh ngoại thất và phòng
+        hotelDto.setExteriorImages(hotel.getExteriorImages());
+        hotelDto.setRoomImages(hotel.getRoomImages());
+
+        // Chuyển đổi từ Amenity sang AmenityDto và gán vào hotelDto
+        List<AmenityDto> amenityDtos = hotel.getAmenities().stream()
                 .map(this::convertAmenityToDto)
-                .collect(Collectors.toList()));
-        hotelDto.setRooms(hotel.getRooms().stream()
+                .collect(Collectors.toList());
+        hotelDto.setAmenities(amenityDtos);
+
+        // Chuyển đổi từ Room sang RoomDto và gán vào hotelDto
+        List<RoomDto> roomDtos = hotel.getRooms().stream()
                 .map(this::convertRoomToDto)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        hotelDto.setRooms(roomDtos);
+
         return hotelDto;
     }
-
 
     private Hotel convertToEntity(HotelDto hotelDto) {
         Hotel hotel = new Hotel();
@@ -162,12 +238,21 @@ public class HotelServiceImpl implements HotelService {
         hotel.setDescription(hotelDto.getDescription());
         hotel.setRating(hotelDto.getRating());
         hotel.setLocation(hotelDto.getLocation());
+        hotel.setPaymentPolicy(hotelDto.getPaymentPolicy());
         hotel.setExteriorImages(hotelDto.getExteriorImages());
         hotel.setRoomImages(hotelDto.getRoomImages());
-        hotel.setPaymentPolicy(hotelDto.getPaymentPolicy());
-        hotel.setRooms(convertRooms(hotelDto.getRooms(), hotel));
 
-        // Convert AmenityDto list to Amenity entities
+        // Chuyển đổi từ RoomDto sang Room và thiết lập liên kết với khách sạn
+        List<Room> rooms = hotelDto.getRooms() != null ? hotelDto.getRooms().stream()
+                .map(roomDto -> {
+                    Room room = convertRoomToEntity(roomDto);
+                    room.setHotel(hotel); // Liên kết room với hotel
+                    return room;
+                })
+                .collect(Collectors.toList()) : new ArrayList<>();
+        hotel.setRooms(rooms);
+
+        // Chuyển đổi từ AmenityDto sang Amenity
         if (hotelDto.getAmenities() != null) {
             List<UUID> amenityIds = hotelDto.getAmenities().stream()
                     .map(AmenityDto::getId)
@@ -177,8 +262,6 @@ public class HotelServiceImpl implements HotelService {
 
         return hotel;
     }
-
-
 
     private AmenityDto convertAmenityToDto(Amenity amenity) {
         AmenityDto amenityDto = new AmenityDto();
@@ -232,15 +315,13 @@ public class HotelServiceImpl implements HotelService {
         room.setCapacity(roomDto.getCapacity());
         room.setBasePrice(roomDto.getBasePrice());
         room.setAvailable(roomDto.isAvailable());
-
-        if (roomDto.getHotelId() != null) {
-            Hotel hotel = hotelRepository.findById(roomDto.getHotelId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Hotel not found"));
-            room.setHotel(hotel);
-        }
-
+        room.setRoomImages(roomDto.getRoomImages());
+        room.setBedType(roomDto.getBedType());
+        room.setBedCount(roomDto.getBedCount());
+        room.setArea(roomDto.getArea());
         return room;
     }
+
     private void validateAmenities(List<AmenityDto> amenities) {
         if (amenities != null) {
             List<UUID> amenityIds = amenities.stream()

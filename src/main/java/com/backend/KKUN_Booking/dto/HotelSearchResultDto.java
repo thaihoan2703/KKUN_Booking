@@ -17,6 +17,6 @@ public class HotelSearchResultDto {
     private BigDecimal lowestPrice;
     private int availableRooms;
     private double popularityScore;
-
-    private RoomDto mostBookedRoom;
+    private RoomDto bestRoom;
+    private int suitabilityScore;
 }

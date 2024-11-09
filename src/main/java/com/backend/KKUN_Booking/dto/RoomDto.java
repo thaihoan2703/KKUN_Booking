@@ -2,6 +2,8 @@ package com.backend.KKUN_Booking.dto;
 
 import com.backend.KKUN_Booking.model.enumModel.BedType;
 import com.backend.KKUN_Booking.model.enumModel.RoomType;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +16,7 @@ import java.util.UUID;
 public class RoomDto {
     private UUID id;
     private RoomType type;
+    @JsonGetter("typeDisplayName")
     public String getTypeDisplayName() {
         return type != null ? type.getDisplayName() : null;
     }
@@ -30,8 +33,10 @@ public class RoomDto {
     private int numOfReviews;
     // Getters and Setters
     // Getter tùy chỉnh cho displayName của bedType
+    @JsonGetter("bedTypeDisplayName")
     public String getBedTypeDisplayName() {
         return bedType != null ? bedType.getDisplayName() : null;
     }
+
 
 }

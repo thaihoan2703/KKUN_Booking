@@ -7,6 +7,7 @@ import com.backend.KKUN_Booking.model.Amenity;
 import com.backend.KKUN_Booking.model.Hotel;
 import com.backend.KKUN_Booking.model.Room;
 import com.backend.KKUN_Booking.model.User;
+import com.backend.KKUN_Booking.model.UserAbstract.HotelOwnerUser;
 import com.backend.KKUN_Booking.model.enumModel.RoleUser;
 import com.backend.KKUN_Booking.repository.AmenityRepository;
 import com.backend.KKUN_Booking.repository.HotelRepository;
@@ -17,6 +18,7 @@ import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.util.CommonFunction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -59,11 +61,21 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomDto createRoom(RoomDto roomDto, MultipartFile[] roomImages, String userEmail) {
+    public RoomDto createRoom(@RequestBody RoomDto roomDto, MultipartFile[] roomImages, String userEmail) {
         User user = findUserByEmail(userEmail);
-        validateUserRole(user);
+        // Kiểm tra và ép kiểu sang HotelOwnerUser
+        if (!(user instanceof HotelOwnerUser)) {
+            throw new IllegalArgumentException("User is not a hotel owner.");
+        }
+        HotelOwnerUser hotelOwnerUser = (HotelOwnerUser) user;
+
+        // Tiếp tục xử lý như ban đầu
+        validateUserRole(hotelOwnerUser);
+
+        roomDto.setHotelId(hotelOwnerUser.getHotel().getId());
 
         List<String> roomImageUrls = uploadRoomImages(roomImages, roomDto);
+        roomDto.setAvailable(true);
         Room room = convertToEntity(roomDto, roomImageUrls);
 
         return convertToDto(roomRepository.save(room));

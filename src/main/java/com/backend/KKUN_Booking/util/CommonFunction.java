@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
@@ -117,5 +119,19 @@ public class CommonFunction {
         return baseAlias.toLowerCase(Locale.ROOT) + "-" + randomNum;
     }
 
+    public static String generateUniqueFileName(String originalFileName) {
+        // Lấy phần mở rộng của file
+        String fileExtension = "";
+        int i = originalFileName.lastIndexOf('.');
+        if (i > 0) {
+            fileExtension = originalFileName.substring(i);
+        }
+
+        // Tạo chuỗi thời gian hiện tại để làm duy nhất tên file
+        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+
+        // Kết hợp thời gian và phần mở rộng để tạo tên file duy nhất
+        return "IMG_" + timeStamp + fileExtension;
+    }
 
 }
