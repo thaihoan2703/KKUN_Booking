@@ -125,7 +125,7 @@ public class BlogPostServiceImpl implements BlogPostService {
 
         // Chỉ lưu tên của tác giả (ví dụ: lastName)
         if (blogPost.getAuthor() != null) {
-            blogPostDTO.setAuthor(blogPost.getAuthor().getLastName());
+            blogPostDTO.setAuthor(blogPost.getAuthor().getFirstName() + " " +blogPost.getAuthor().getLastName());
         }
 
         // Chuyển đổi BlogPostContent sang BlogPostContentDTO

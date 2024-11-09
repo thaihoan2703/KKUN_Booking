@@ -67,7 +67,7 @@ public class WebSecurityConfig {
 
                         // Route `/api/users/me` cho phép tất cả vai trò cập nhật thông tin cá nhân
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
-                        .requestMatchers(HttpMethod.POST, "/api/blogs/**").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
+                        .requestMatchers(HttpMethod.POST, "/api/blogs/**","/api/upload/create").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
 
                         // Những route yêu cầu quyền quản trị - ADMIN
                         .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels").hasAuthority(RoleUser.ADMIN.name())
