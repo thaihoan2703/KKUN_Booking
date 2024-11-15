@@ -19,6 +19,9 @@ public class HotelDto {
     private String description;
     private Double rating;
     private String location;
+    private Boolean freeCancellation;
+    private Boolean breakfastIncluded;
+    private Boolean prePayment;
     private PaymentPolicy paymentPolicy;
     private List<String> exteriorImages;
     private List<String> roomImages;

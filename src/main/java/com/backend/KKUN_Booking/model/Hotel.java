@@ -44,6 +44,9 @@ public class Hotel {
 
     private PaymentPolicy paymentPolicy; // "ONLINE" or "CHECKOUT"
 
+    private Boolean freeCancellation;
+    private Boolean breakfastIncluded;
+    private Boolean prePayment;
 
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Room> rooms = new ArrayList<>();

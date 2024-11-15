@@ -77,7 +77,7 @@ public class HotelServiceImpl implements HotelService {
         return convertToDto(hotelRepository.save(hotel));
     }
 
-    public HotelDto createHotelAndRooms(
+        public HotelDto createHotelAndRooms(
             HotelDto hotelDto,
             MultipartFile[] exteriorImages,
             MultipartFile[] roomImages,
@@ -207,7 +207,11 @@ public class HotelServiceImpl implements HotelService {
         hotelDto.setRating(hotel.getRating());
         hotelDto.setLocation(hotel.getLocation());
         hotelDto.setDescription(hotel.getDescription());
+        hotelDto.setFreeCancellation(hotel.getFreeCancellation());
+        hotelDto.setBreakfastIncluded(hotel.getBreakfastIncluded());
+        hotelDto.setPrePayment(hotel.getPrePayment());
         hotelDto.setPaymentPolicy(hotel.getPaymentPolicy());
+
         hotelDto.setNumOfReviews(hotel.getNumOfReviews());
         hotelDto.setOwnerName(hotel.getOwner().getFirstName() + " " + hotel.getOwner().getLastName());
 
@@ -238,6 +242,9 @@ public class HotelServiceImpl implements HotelService {
         hotel.setDescription(hotelDto.getDescription());
         hotel.setRating(hotelDto.getRating());
         hotel.setLocation(hotelDto.getLocation());
+        hotel.setFreeCancellation(hotelDto.getFreeCancellation());
+        hotel.setBreakfastIncluded(hotelDto.getBreakfastIncluded());
+        hotel.setPrePayment(hotelDto.getPrePayment());
         hotel.setPaymentPolicy(hotelDto.getPaymentPolicy());
         hotel.setExteriorImages(hotelDto.getExteriorImages());
         hotel.setRoomImages(hotelDto.getRoomImages());
