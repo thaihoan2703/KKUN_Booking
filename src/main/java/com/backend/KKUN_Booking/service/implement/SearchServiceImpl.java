@@ -93,8 +93,22 @@ public class SearchServiceImpl implements SearchService {
 
     private boolean hasRequiredAmenities(Hotel hotel, List<String> amenities) {
         if (amenities == null || amenities.isEmpty()) return true;
-        Set<String> hotelAmenities = hotel.getAmenities().stream().map(Amenity::getName).collect(Collectors.toSet());
-        return hotelAmenities.containsAll(amenities);
+
+        // Chuẩn hóa danh sách tiện ích khách sạn
+        List<String> hotelAmenities = hotel.getAmenities().stream()
+                .map(amenity -> amenity.getName().toLowerCase()) // Convert to lowercase
+                .collect(Collectors.toList());
+
+        // Chuẩn hóa danh sách tiện ích yêu cầu
+        List<String> normalizedAmenities = amenities.stream()
+                .map(String::toLowerCase) // Convert to lowercase
+                .collect(Collectors.toList());
+
+        // Kiểm tra nếu tất cả tiện ích yêu cầu xuất hiện dưới dạng chứa trong tên tiện ích khách sạn
+        return normalizedAmenities.stream()
+                .allMatch(requiredAmenity ->
+                        hotelAmenities.stream().anyMatch(hotelAmenity -> hotelAmenity.contains(requiredAmenity))
+                );
     }
 
     private boolean hasRoomWithinPriceRange(Hotel hotel, BigDecimal minPrice, BigDecimal maxPrice) {

@@ -23,15 +23,26 @@ public class NotificationService {
         this.emailSender = emailSender;
     }
 
-    public void sendReviewReminder(User user, Booking booking) throws MessagingException {
+    public void sendReviewReminder(String recipientEmail, Booking booking) throws MessagingException {
         MimeMessage message = emailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true); // true = multipart
 
-        helper.setTo(user.getEmail());
+        // Đặt email người nhận
+        helper.setTo(recipientEmail);
+
+        // Tiêu đề email
         helper.setSubject("Reminder: Please review your recent stay");
 
-        String link = baseUrl + "/rooms/" + booking.getRoom().getId() + "/bookings/" + booking.getId() + "/review"; // Đường dẫn đến trang đánh giá
-        String emailContent = "<p>Dear " + user.getLastName() + ",</p>" +
+        // Tên người nhận (nếu user không tồn tại, lấy tên từ booking)
+        String recipientName = (booking.getUser() != null && booking.getUser().getLastName() != null)
+                ? booking.getUser().getLastName()
+                : booking.getBookingName();
+
+        // Tạo link đến trang đánh giá
+        String link = baseUrl + "/rooms/" + booking.getRoom().getId() + "/bookings/" + booking.getId() + "/review";
+
+        // Nội dung email
+        String emailContent = "<p>Dear " + recipientName + ",</p>" +
                 "<p>We hope you enjoyed your recent stay at our hotel. " +
                 "We would greatly appreciate if you could take a moment to review your experience. " +
                 "Your feedback is valuable to us and helps us improve our services.</p>" +
@@ -40,8 +51,9 @@ public class NotificationService {
                 "<p>Best regards,<br><strong>" +
                 booking.getRoom().getHotel().getName() + "</strong></p>";
 
+        // Gửi email
         helper.setText(emailContent, true); // true = HTML
-
         emailSender.send(message);
     }
+
 }

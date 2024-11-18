@@ -1,6 +1,7 @@
 package com.backend.KKUN_Booking.scheduler;
 
 import com.backend.KKUN_Booking.model.Booking;
+import com.backend.KKUN_Booking.model.User;
 import com.backend.KKUN_Booking.service.BookingService;
 import com.backend.KKUN_Booking.service.NotificationService;
 import jakarta.mail.MessagingException;
@@ -27,7 +28,11 @@ public class BookingReviewScheduler {
         List<Booking> completedBookings = bookingService.getCompletedBookingsWithoutReview();
         for (Booking booking : completedBookings) {
             try {
-                notificationService.sendReviewReminder(booking.getUser(), booking);
+                User user = booking.getUser();
+                String recipientEmail = (user != null) ? user.getEmail() : booking.getBookingEmail();
+
+                // Gửi thông báo sử dụng recipientEmail
+                notificationService.sendReviewReminder(recipientEmail, booking);
             } catch (MessagingException e) {
                 // Xử lý ngoại lệ ở đây (log, thông báo, v.v.)
                 System.err.println("Error sending review reminder: " + e.getMessage());

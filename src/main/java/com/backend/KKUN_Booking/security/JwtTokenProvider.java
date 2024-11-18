@@ -72,10 +72,16 @@ public class JwtTokenProvider {
         try {
             Jwts.parser().setSigningKey(jwtSecret).build().parseClaimsJws(token);
             return true;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            System.out.println("Token hết hạn: " + e.getMessage());
+        } catch (io.jsonwebtoken.SignatureException e) {
+            System.out.println("Chữ ký không hợp lệ: " + e.getMessage());
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            System.out.println("Token sai định dạng: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Token validation failed: " + e.getMessage());
-            return false;
+            System.out.println("Lỗi khác: " + e.getMessage());
         }
+        return false;
     }
 
     public String getUserFromJWT(String token) {
@@ -86,10 +92,16 @@ public class JwtTokenProvider {
                     .getBody();
 
             return claims.getSubject();
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            System.out.println("Token hết hạn khi lấy thông tin user: " + e.getMessage());
+        } catch (io.jsonwebtoken.SignatureException e) {
+            System.out.println("Chữ ký không hợp lệ: " + e.getMessage());
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            System.out.println("Token sai định dạng khi lấy thông tin user: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Failed to extract user from JWT: " + e.getMessage());
-            return null;
+            System.out.println("Lỗi khác khi lấy thông tin user: " + e.getMessage());
         }
+        return null;
     }
 
     public UsernamePasswordAuthenticationToken getAuthentication(String token, UserDetails userDetails) {

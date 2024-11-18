@@ -5,6 +5,7 @@ import com.backend.KKUN_Booking.dto.PaymentDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
 import com.backend.KKUN_Booking.model.Booking;
 import com.backend.KKUN_Booking.model.Payment;
+import com.backend.KKUN_Booking.model.User;
 import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentType;
@@ -178,12 +179,19 @@ public class PaymentServiceImpl implements PaymentService {
         return response;
     }
 
-    public void processCheckout(UUID paymentId){
+    public void processCheckout(UUID paymentId) {
         try {
             Payment payment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-            if (payment.getBooking().getStatus().equals(BookingStatus.CONFIRMED) && payment.getBooking().isReviewed() == false ) {
-                notificationService.sendReviewReminder(payment.getBooking().getUser(), payment.getBooking());
+
+            // Kiểm tra điều kiện gửi thông báo
+            Booking booking = payment.getBooking();
+            if (booking.getStatus().equals(BookingStatus.CONFIRMED) && !booking.isReviewed()) {
+                User user = booking.getUser();
+                String recipientEmail = (user != null) ? user.getEmail() : booking.getBookingEmail();
+
+                // Gửi thông báo sử dụng recipientEmail
+                notificationService.sendReviewReminder(recipientEmail, booking);
             }
 
         } catch (MessagingException e) {
