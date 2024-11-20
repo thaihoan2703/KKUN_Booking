@@ -61,13 +61,17 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
                         // Những route cho phép truy cập chung
-                        .requestMatchers(HttpMethod.GET, "/api/blogs/**","/api/search/**", "/api/bookings/{id}", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**","/api/reviews/rooms/**", "/api/recommendations/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/search/**", "/api/recommendations/**","/api/chat/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/blogs/**", "/api/search/**", "/api/bookings/{id}", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**", "/api/reviews/rooms/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/search/**", "/api/recommendations/**", "/api/chat/**").permitAll()
                         .requestMatchers("/", "/api/auth/**", "/api/auth/google", "/api/auth/login", "/api/auth/register", "/oauth2/**").permitAll()
+
+                        // Cho phép truy cập ẩn danh cho `/api/bookings/create`
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/create","/api/bookings/{id}/payment").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/create","/api/bookings/payment-callback").permitAll()
 
                         // Route `/api/users/me` cho phép tất cả vai trò cập nhật thông tin cá nhân
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
-                        .requestMatchers(HttpMethod.POST, "/api/blogs/**","/api/upload/create").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
+                        .requestMatchers(HttpMethod.POST, "/api/blogs/**", "/api/upload/create").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
 
                         // Những route yêu cầu quyền quản trị - ADMIN
                         .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels").hasAuthority(RoleUser.ADMIN.name())
@@ -86,6 +90,7 @@ public class WebSecurityConfig {
                         // Đảm bảo các quyền còn lại là xác thực
                         .anyRequest().authenticated()
                 )
+
 
 
                 .exceptionHandling(exception -> exception

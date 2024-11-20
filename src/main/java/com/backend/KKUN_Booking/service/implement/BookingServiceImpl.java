@@ -64,9 +64,13 @@ public class BookingServiceImpl implements BookingService {
     }
 
     public BookingDto createBooking(BookingDto bookingDto, String userEmail) {
-        // Fetch the user by email
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = null;
+
+        // Nếu không phải user ẩn danh, tìm kiếm user trong cơ sở dữ liệu
+        if (userEmail != null && !userEmail.equals("anonymous@domain.com")) {
+            user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        }
 
         // Fetch the room by ID
         Room room = roomRepository.findById(bookingDto.getRoomId())
@@ -89,7 +93,9 @@ public class BookingServiceImpl implements BookingService {
 
         // Convert DTO to entity
         Booking booking = convertToEntity(bookingDto);
-        booking.setUser(user);
+        if (user != null) {
+            booking.setUser(user); // Chỉ set user nếu không phải null
+        } // user có thể là null nếu là người dùng ẩn danh
         booking.setRoom(room);
         booking.setReviewed(false);
 
@@ -104,6 +110,7 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         return convertToDto(savedBooking);
     }
+
 
     public List<BookingDto> getBookingHistory(String userEmail){
         User user = userRepository.findByEmail(userEmail)
