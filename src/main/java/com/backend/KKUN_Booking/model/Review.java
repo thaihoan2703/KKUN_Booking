@@ -22,6 +22,10 @@ public abstract class Review {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean anonymous;
+
+    private String reviewerName; // Tên người đánh giá (nếu là ẩn danh)
     @OneToOne
     @JoinColumn(name = "booking_id", referencedColumnName = "id")
     private Booking booking;

@@ -3,12 +3,10 @@ package com.backend.KKUN_Booking.service.implement;
 import com.backend.KKUN_Booking.dto.BookingDto;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.PaymentDto;
+import com.backend.KKUN_Booking.dto.PriceCalculationResult;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
 import com.backend.KKUN_Booking.model.*;
-import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
-import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
-import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
-import com.backend.KKUN_Booking.model.enumModel.PaymentType;
+import com.backend.KKUN_Booking.model.enumModel.*;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.repository.*;
 import com.backend.KKUN_Booking.response.PaymentResponse;
@@ -35,15 +33,17 @@ public class BookingServiceImpl implements BookingService {
     private final RoomRepository roomRepository;
 
     private final ReviewRepository reviewRepository;
+    private final PromotionRepository promotionRepository;
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
     private final PaymentService paymentService;
 
-    public BookingServiceImpl(BookingRepository bookingRepository, RoomRepository roomRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository, HotelRepository hotelRepository, UserRepository userRepository, PaymentService paymentService) {
+    public BookingServiceImpl(BookingRepository bookingRepository, RoomRepository roomRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository, PromotionRepository promotionRepository, HotelRepository hotelRepository, UserRepository userRepository, PaymentService paymentService) {
         this.bookingRepository = bookingRepository;
         this.roomRepository = roomRepository;
         this.paymentRepository = paymentRepository;
         this.reviewRepository = reviewRepository;
+        this.promotionRepository = promotionRepository;
         this.hotelRepository = hotelRepository;
         this.userRepository = userRepository;
         this.paymentService = paymentService;
@@ -63,6 +63,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
     }
 
+    @Override
     public BookingDto createBooking(BookingDto bookingDto, String userEmail) {
         User user = null;
 
@@ -81,28 +82,44 @@ public class BookingServiceImpl implements BookingService {
             throw new IllegalStateException("Phòng này đã được đặt trước vào khoảng thời gian bạn chọn!");
         }
 
-        // Các yếu tố tính toán
-        BigDecimal basePrice = room.getBasePrice();
-        BigDecimal discount = bookingDto.getDiscount() != null ? bookingDto.getDiscount() : BigDecimal.ZERO;
-        BigDecimal taxRate = new BigDecimal("0.1");          // Ví dụ: 10% thuế
-        BigDecimal serviceFeeRate = BigDecimal.ZERO;  // Ví dụ: 5% phí dịch vụ
+        // Tìm `Promotion` nếu có
+        Promotion promotion = null;
+        if (bookingDto.getPromotionId() != null) {
+            promotion = promotionRepository.findById(bookingDto.getPromotionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Promotion not found"));
+        }
 
-        // Calculate total price
-        BigDecimal totalPrice = calculateTotalPrice(basePrice, bookingDto.getCheckinDate(), bookingDto.getCheckoutDate(), discount, taxRate, serviceFeeRate);
-        bookingDto.setTotalPrice(totalPrice);
+        // Tính tổng giá và các khoản phí
+        BigDecimal basePrice = room.getBasePrice();
+        BigDecimal taxRate = new BigDecimal("0.1");          // Ví dụ: 10% thuế
+        BigDecimal serviceFeeRate = BigDecimal.ZERO;         // Ví dụ: 5% phí dịch vụ
+
+        PriceCalculationResult priceCalculation = calculateTotalPrice(basePrice, bookingDto.getCheckinDate(),
+                bookingDto.getCheckoutDate(), taxRate, serviceFeeRate, promotion);
+
+        // Gán thông tin vào DTO
+        bookingDto.setTotalPrice(priceCalculation.getTotalPrice());
+        bookingDto.setDiscount(priceCalculation.getDiscountAmount()); // Giá trị giảm giá
+        bookingDto.setTaxRate(priceCalculation.getTaxAmount());       // Thuế
+        bookingDto.setServiceFeeRate(priceCalculation.getServiceFee()); // Phí dịch vụ
 
         // Convert DTO to entity
         Booking booking = convertToEntity(bookingDto);
         if (user != null) {
-            booking.setUser(user); // Chỉ set user nếu không phải null
-        } // user có thể là null nếu là người dùng ẩn danh
+            booking.setUser(user);
+        }
         booking.setRoom(room);
         booking.setReviewed(false);
+        booking.setPromotion(promotion);
+
+        // Gán các khoản phí vào entity
+        booking.setDiscount(priceCalculation.getDiscountAmount());
+        booking.setTaxRate(priceCalculation.getTaxAmount());
+        booking.setServiceFeeRate(priceCalculation.getServiceFee());
 
         // Handle payment policy
         if (room.getHotel().getPaymentPolicy() == PaymentPolicy.CHECKOUT) {
             booking.setStatus(BookingStatus.PAY_ON_CHECKOUT);
-            booking.getPayment().setPaymentType(PaymentType.POC);  // Payment on checkout
         } else {
             booking.setStatus(BookingStatus.PENDING);
         }
@@ -110,7 +127,6 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         return convertToDto(savedBooking);
     }
-
 
     public List<BookingDto> getBookingHistory(String userEmail){
         User user = userRepository.findByEmail(userEmail)
@@ -169,31 +185,46 @@ public class BookingServiceImpl implements BookingService {
         return !existingBookings.isEmpty();
     }
     // Method to calculate total price based on the number of nights
-    public BigDecimal calculateTotalPrice(BigDecimal basePrice, LocalDateTime checkinDate,
-                                          LocalDateTime checkoutDate, BigDecimal discount,
-                                          BigDecimal taxRate, BigDecimal serviceFeeRate) {
+    private PriceCalculationResult calculateTotalPrice(BigDecimal basePrice, LocalDateTime checkinDate,
+                                                       LocalDateTime checkoutDate,
+                                                       BigDecimal taxRate, BigDecimal serviceFeeRate, Promotion promotion) {
         // Tính số đêm lưu trú
         long numberOfNights = ChronoUnit.DAYS.between(checkinDate.toLocalDate(), checkoutDate.toLocalDate());
         if (numberOfNights <= 0) {
-            return BigDecimal.ZERO;
+            return new PriceCalculationResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
         // Tính giá phòng cơ bản cho toàn bộ số đêm
         BigDecimal roomCost = basePrice.multiply(BigDecimal.valueOf(numberOfNights));
 
-        // Áp dụng mã giảm giá nếu có
-        BigDecimal discountAmount = roomCost.multiply(discount); // discount là tỷ lệ, ví dụ 0.1 cho 10%
+        // Áp dụng mã giảm giá từ Promotion (nếu có)
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (promotion != null) {
+            if (promotion.getDiscountType() == DiscountType.PERCENT) {
+                discountAmount = roomCost.multiply(BigDecimal.valueOf(promotion.getValue()).divide(BigDecimal.valueOf(100)));
+            } else if (promotion.getDiscountType() == DiscountType.FIXED) {
+                discountAmount = BigDecimal.valueOf(promotion.getValue());
+            }
+
+            // Giới hạn giảm giá nếu vượt quá maxDiscountValue
+            if (promotion.getMaxDiscountValue() != null && discountAmount.compareTo(promotion.getMaxDiscountValue()) > 0) {
+                discountAmount = promotion.getMaxDiscountValue(); // Chỉ áp dụng đến maxDiscountValue
+            }
+        }
+
+        // Tính giá sau khi giảm giá
         BigDecimal discountedPrice = roomCost.subtract(discountAmount);
 
         // Tính thuế và phí dịch vụ
-        BigDecimal taxAmount = discountedPrice.multiply(taxRate);           // Ví dụ: taxRate = 0.1 (10%)
-        BigDecimal serviceFee = discountedPrice.multiply(serviceFeeRate);   // Ví dụ: serviceFeeRate = 0.05 (5%)
+        BigDecimal taxAmount = discountedPrice.multiply(taxRate != null ? taxRate : BigDecimal.ZERO);
+        BigDecimal serviceFee = discountedPrice.multiply(serviceFeeRate != null ? serviceFeeRate : BigDecimal.ZERO);
 
         // Tính tổng giá cuối cùng
         BigDecimal totalPrice = discountedPrice.add(taxAmount).add(serviceFee);
 
-        return totalPrice;
+        return new PriceCalculationResult(totalPrice, discountAmount, taxAmount, serviceFee);
     }
+
 
 
     @Override
@@ -271,8 +302,12 @@ public class BookingServiceImpl implements BookingService {
         bookingDto.setDiscount(booking.getDiscount());
         bookingDto.setTaxRate(booking.getTaxRate());
         bookingDto.setServiceFeeRate(booking.getServiceFeeRate());
-
         bookingDto.setTotalPrice(booking.getTotalPrice());
+
+        // Thiết lập thông tin Promotion nếu có
+        if (booking.getPromotion() != null) {
+            bookingDto.setId(booking.getPromotion().getId());
+        }
 
         // Thiết lập thông tin thanh toán
         if (booking.getPayment() != null) {
@@ -290,6 +325,7 @@ public class BookingServiceImpl implements BookingService {
 
         return bookingDto;
     }
+
 
     private Booking convertToEntity(BookingDto bookingDto) {
         Booking booking = new Booking();
@@ -314,6 +350,13 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setTotalPrice(bookingDto.getTotalPrice());
 
+        // Gán đối tượng Promotion nếu có promotionId
+        if (bookingDto.getPromotionId() != null) {
+            Promotion promotion = promotionRepository.findById(bookingDto.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Promotion not found with ID: " + bookingDto.getId()));
+            booking.setPromotion(promotion);
+        }
+
         // Thiết lập đối tượng Payment nếu chưa có
         if (bookingDto.getPayment() == null) {
             Payment payment = new Payment();
@@ -329,6 +372,7 @@ public class BookingServiceImpl implements BookingService {
 
         return booking;
     }
+
 
 
 }
