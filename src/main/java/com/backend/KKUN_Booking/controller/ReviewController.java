@@ -56,10 +56,27 @@ public class ReviewController {
             @PathVariable UUID bookingId,
             @RequestBody ReviewDto reviewDto,
             Principal principal) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Bạn cần đăng nhập để đánh giá đặt phòng.");
+        // Lấy thông tin đặt phòng
+        BookingDto bookingDto = bookingService.getBookingById(bookingId);
+        if (bookingDto == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Đơn đặt phòng không tồn tại.");
         }
-        // Lấy email của người dùng từ Principal
+
+        // Kiểm tra trạng thái của booking để xác định có thể đánh giá hay không
+        if (bookingDto.isReviewed() || bookingDto.getStatus() == BookingStatus.CONFIRMED) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn này đã được đánh giá hoặc chưa xác nhận.");
+        }
+
+        // Nếu Principal là null, xử lý như người dùng ẩn danh
+        if (principal == null) {
+
+            // Gán thông tin đánh giá ẩn danh
+            reviewDto.setAnonymous(true); // Đặt flag đánh giá ẩn danh
+            ReviewDto createdReview = reviewService.createReview(bookingId, reviewDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdReview);
+        }
+
+        // Xử lý đánh giá với người dùng đã đăng nhập
         String userEmail = principal.getName();
         Optional<User> user = userRepository.findByEmail(userEmail);
 
@@ -73,25 +90,15 @@ public class ReviewController {
         userDto.setId(user.get().getId());
         reviewDto.setUser(userDto);
 
-        // Lấy thông tin đặt phòng
-        BookingDto bookingDto = bookingService.getBookingById(bookingId);
-        if (bookingDto == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Đơn đặt phòng không tồn tại.");
-        }
-
         // Kiểm tra quyền truy cập: chỉ cho phép đánh giá nếu userId trong booking khớp với user hiện tại
         if (!bookingDto.getUserId().equals(userDto.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không được phép đánh giá đặt phòng này.");
         }
 
-        // Kiểm tra trạng thái của booking để xác định có thể đánh giá hay không
-        if (!bookingDto.isReviewed() && bookingDto.getStatus() == BookingStatus.CONFIRMED) {
-            ReviewDto createdReview = reviewService.createReview(bookingId, reviewDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdReview);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn này đã được đánh giá hoặc chưa xác nhận.");
-        }
+        ReviewDto createdReview = reviewService.createReview(bookingId, reviewDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdReview);
     }
+
 
 
     @PutMapping("/{id}")

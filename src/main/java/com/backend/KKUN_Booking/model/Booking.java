@@ -70,4 +70,8 @@ public class Booking {
     @JsonManagedReference // This will be serialized
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private Payment payment;
+
+    @ManyToOne
+    @JoinColumn(name = "promotion_id", nullable = true)
+    private Promotion promotion;
 }

@@ -22,5 +22,7 @@ public abstract class ReviewDto {
     private LocalDateTime date;
     private double overallRating;
     private UserDto user;
+    private String reviewerName; // Tên người đánh giá (nếu là ẩn danh)
+    private boolean anonymous;
 }
 

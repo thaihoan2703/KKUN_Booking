@@ -33,11 +33,11 @@ public class BookingDto {
     private BigDecimal discount;           // Tỷ lệ giảm giá (vd: 0.1 cho 10%)
     private BigDecimal taxRate;            // Tỷ lệ thuế (vd: 0.1 cho 10%)
     private BigDecimal serviceFeeRate;     // Tỷ lệ phí dịch vụ (vd: 0.05 cho 5%)
-
     private BigDecimal totalPrice;         // Tổng giá sau khi tính toán
     private PaymentType paymentType;       // Phương thức thanh toán
 
     private UUID userId;                   // Khóa ngoại đến User
     private UUID roomId;                   // Khóa ngoại đến Room
+    private UUID promotionId;
     private Payment payment;               // Chi tiết thanh toán (khóa ngoại đến Payment)
 }

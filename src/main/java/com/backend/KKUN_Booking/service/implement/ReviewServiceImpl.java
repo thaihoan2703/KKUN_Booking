@@ -77,27 +77,29 @@ public class ReviewServiceImpl implements ReviewService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        if (!booking.getUser().getId().equals(reviewDto.getUser().getId())) {
-            throw new CustomBadRequestException("You did not book this booking!");
+        // Nếu không phải đánh giá ẩn danh, kiểm tra quyền truy cập
+        if (!reviewDto.isAnonymous()) {
+            if (reviewDto.getUser() == null || !booking.getUser().getId().equals(reviewDto.getUser().getId())) {
+                throw new CustomBadRequestException("You did not book this booking!");
+            }
         }
 
-        if (booking.isReviewed() && booking.getStatus() == BookingStatus.CONFIRMED) {
+        // Kiểm tra trạng thái của booking
+        if (booking.isReviewed() || booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new CustomBadRequestException("Cannot review this booking. This booking has already been reviewed!");
         }
-        UserDto user = userService.getUserById(reviewDto.getUser().getId());
-        ReviewDto createdReview;
 
+        // Xử lý đánh giá
+        ReviewDto createdReview;
         if (reviewDto instanceof RoomReviewDto) {
             createdReview = createRoomReview((RoomReviewDto) reviewDto, booking);
-            // After creating a room review, update the hotel rating
             Room room = booking.getRoom();
             if (room != null && room.getHotel() != null) {
-                room.getHotel().updateRating(); // Update the hotel rating
+                room.getHotel().updateRating(); // Cập nhật rating cho khách sạn
                 room.getHotel().updateNumOfReviews();
             }
         } else if (reviewDto instanceof TouringReviewDto) {
             createdReview = createTouringReview((TouringReviewDto) reviewDto, booking);
-            // You might want to update the hotel rating if needed here
         } else {
             throw new CustomBadRequestException("Invalid review type");
         }
@@ -106,8 +108,10 @@ public class ReviewServiceImpl implements ReviewService {
         return createdReview;
     }
 
+
     private ReviewDto createRoomReview(RoomReviewDto roomReviewDto, Booking booking) {
         RoomReview review = new RoomReview();
+        roomReviewDto.setReviewerName(booking.getBookingName());
         roomReviewDto.setRoomId(booking.getRoom().getId());
         populateRoomReview(roomReviewDto, review);
         review.setBooking(booking);
@@ -124,6 +128,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private ReviewDto createTouringReview(TouringReviewDto touringReviewDto, Booking booking) {
         TouringReview review = new TouringReview();
+        review.setReviewerName(booking.getBookingName());
         populateTouringReview(touringReviewDto, review);
         review.setBooking(booking);
         return convertToDto(reviewRepository.save(review));
@@ -181,12 +186,19 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     private void populateCommonFields(ReviewDto reviewDto, Review review) {
-        review.setId(reviewDto.getId());
         review.setOverallRating(reviewDto.getOverallRating());
         review.setComment(reviewDto.getComment());
         review.setDate(LocalDateTime.now());
-        review.setUser(userRepository.findById(reviewDto.getUser().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found")));
+
+        // Nếu là đánh giá ẩn danh, chỉ lưu tên người đánh giá (nếu có)
+        if (reviewDto.isAnonymous()) {
+            review.setReviewerName(reviewDto.getReviewerName());
+            review.setAnonymous(true);
+        } else {
+            // Nếu không ẩn danh, gán thông tin người dùng
+            review.setUser(userRepository.findById(reviewDto.getUser().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found")));
+        }
     }
 
     private void updateRoomReview(RoomReview roomReview, RoomReviewDto roomReviewDto) {
@@ -222,6 +234,7 @@ public class ReviewServiceImpl implements ReviewService {
     private RoomReviewDto convertToRoomReviewDto(RoomReview review) {
         RoomReviewDto dto = new RoomReviewDto();
         populateCommonDtoFields(dto, review);
+        dto.setReviewerName(review.getReviewerName());
         dto.setUser(convertUserToDto(review.getUser()));
         dto.setRoomId(review.getRoom().getId());
         dto.setCleanliness(review.getCleanliness());
@@ -236,6 +249,7 @@ public class ReviewServiceImpl implements ReviewService {
     private TouringReviewDto convertToTouringReviewDto(TouringReview review) {
         TouringReviewDto dto = new TouringReviewDto();
         populateCommonDtoFields(dto, review);
+        dto.setReviewerName(review.getReviewerName());
         dto.setTouringId(review.getTouring().getId());
         dto.setItinerary(review.getItinerary());
         dto.setAttractions(review.getAttractions());

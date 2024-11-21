@@ -74,7 +74,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/blogs/**", "/api/upload/create").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
 
                         // Những route yêu cầu quyền quản trị - ADMIN
-                        .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels", "/api/promotions/**").hasAuthority(RoleUser.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/users", "/api/roles/**").hasAuthority(RoleUser.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.ADMIN.name()) // Cho phép ADMIN quản lý mọi người dùng
 
@@ -165,7 +165,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5005"));
+        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5005/webhooks"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowCredentials(true); // If you need to allow credentials like cookies
