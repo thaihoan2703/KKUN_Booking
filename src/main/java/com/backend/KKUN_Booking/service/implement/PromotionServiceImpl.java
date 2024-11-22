@@ -120,4 +120,10 @@ public class PromotionServiceImpl implements PromotionService {
             throw new RuntimeException("Promotion not found with ID: " + id);
         }
     }
+    @Override
+    public Optional<PromotionDto> getPromotionByCode(String code) {
+        Optional<Promotion> promotion = promotionRepository.findByCode(code);
+        return promotion.map(this::convertToDto);
+    }
+
 }

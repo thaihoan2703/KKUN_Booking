@@ -306,7 +306,7 @@ public class BookingServiceImpl implements BookingService {
 
         // Thiết lập thông tin Promotion nếu có
         if (booking.getPromotion() != null) {
-            bookingDto.setId(booking.getPromotion().getId());
+            bookingDto.setPromotionId(booking.getPromotion().getId());
         }
 
         // Thiết lập thông tin thanh toán
@@ -352,8 +352,8 @@ public class BookingServiceImpl implements BookingService {
 
         // Gán đối tượng Promotion nếu có promotionId
         if (bookingDto.getPromotionId() != null) {
-            Promotion promotion = promotionRepository.findById(bookingDto.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Promotion not found with ID: " + bookingDto.getId()));
+            Promotion promotion = promotionRepository.findById(bookingDto.getPromotionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Promotion not found with ID: " + bookingDto.getPromotionId()));
             booking.setPromotion(promotion);
         }
 

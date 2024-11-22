@@ -13,4 +13,6 @@ public interface PromotionService {
     PromotionDto createPromotion(PromotionDto promotionDto);
     PromotionDto updatePromotion(UUID id, PromotionDto promotionDto);
     void deletePromotion(UUID id);
+    Optional<PromotionDto> getPromotionByCode(String code);
+
 }
