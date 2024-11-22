@@ -67,7 +67,7 @@ public class WebSecurityConfig {
 
                         // Cho phép truy cập ẩn danh cho `/api/bookings/create`
                         .requestMatchers(HttpMethod.POST, "/api/bookings/create","/api/bookings/{id}/payment").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/create","/api/bookings/payment-callback").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/create","/api/bookings/payment-callback", "/api/promotions/**").permitAll()
 
                         // Route `/api/users/me` cho phép tất cả vai trò cập nhật thông tin cá nhân
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())

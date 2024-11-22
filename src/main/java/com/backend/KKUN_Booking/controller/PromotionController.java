@@ -44,4 +44,12 @@ public class PromotionController {
         promotionService.deletePromotion(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/code/{voucherCode}")
+    public ResponseEntity<PromotionDto> getPromotionByCode(@PathVariable String voucherCode) {
+        return promotionService.getPromotionByCode(voucherCode)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 }
