@@ -124,6 +124,12 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.PENDING);
         }
 
+        // Cập nhật usedCount của promotion nếu có
+        if (promotion != null) {
+            promotion.setUsedCount(promotion.getUsedCount() + 1); // Tăng usedCount lên 1
+            promotionRepository.save(promotion); // Lưu lại vào database
+        }
+
         Booking savedBooking = bookingRepository.save(booking);
         return convertToDto(savedBooking);
     }

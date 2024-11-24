@@ -85,7 +85,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         // Kiểm tra trạng thái của booking
-        if (booking.isReviewed() || booking.getStatus() == BookingStatus.CONFIRMED) {
+        if (booking.isReviewed() && booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new CustomBadRequestException("Cannot review this booking. This booking has already been reviewed!");
         }
 

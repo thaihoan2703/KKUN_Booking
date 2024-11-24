@@ -63,7 +63,7 @@ public class ReviewController {
         }
 
         // Kiểm tra trạng thái của booking để xác định có thể đánh giá hay không
-        if (bookingDto.isReviewed() || bookingDto.getStatus() == BookingStatus.CONFIRMED) {
+        if (bookingDto.isReviewed() && bookingDto.getStatus() == BookingStatus.CONFIRMED) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn này đã được đánh giá hoặc chưa xác nhận.");
         }
 
