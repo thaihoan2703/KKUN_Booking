@@ -82,6 +82,7 @@ public class PromotionServiceImpl implements PromotionService {
         }
 
         // Chuyển từ DTO sang entity và lưu vào DB
+        promotionDto.setActive(true);
         Promotion promotion = convertToEntity(promotionDto);
         Promotion savedPromotion = promotionRepository.save(promotion);
         return convertToDto(savedPromotion);

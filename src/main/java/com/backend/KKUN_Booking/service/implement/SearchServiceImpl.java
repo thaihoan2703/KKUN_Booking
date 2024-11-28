@@ -141,7 +141,7 @@ public class SearchServiceImpl implements SearchService {
 
     private HotelSearchResultDto createHotelSearchResultDto(Hotel hotel, LocalDateTime checkInDate, LocalDateTime checkOutDate,
                                                             int guests, BigDecimal minPrice, BigDecimal maxPrice) {
-        List<Room> suitableRooms = roomRepository.findAvailableRoomsByHotelAndDateRange(hotel.getId(), checkInDate, checkOutDate).stream()
+        List<Room> suitableRooms = roomRepository.findAll().stream()
                 .filter(room -> room.getCapacity() >= guests)
                 .filter(room -> isRoomWithinPriceRange(room, minPrice, maxPrice))
                 .collect(Collectors.toList());

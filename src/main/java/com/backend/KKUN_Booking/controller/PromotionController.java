@@ -2,14 +2,18 @@ package com.backend.KKUN_Booking.controller;
 
 
 import com.backend.KKUN_Booking.dto.PromotionDto;
+import com.backend.KKUN_Booking.model.enumModel.DiscountType;
 import com.backend.KKUN_Booking.service.PromotionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/promotions")
@@ -52,4 +56,14 @@ public class PromotionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/discount-types")
+    public ResponseEntity<List<Map<String, String>>> getDiscountTypes() {
+        List<Map<String, String>> discountTypes = Arrays.stream(DiscountType.values())
+                .map(type -> Map.of(
+                        "value", type.name(),
+                        "label", type.getDisplayName()
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(discountTypes);
+    }
 }
