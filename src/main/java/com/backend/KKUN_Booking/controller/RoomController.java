@@ -6,9 +6,11 @@ import com.backend.KKUN_Booking.model.enumModel.AmenityType;
 import com.backend.KKUN_Booking.model.enumModel.BedType;
 import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.service.RoomService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,12 +60,34 @@ public class RoomController {
         RoomDto updatedRoom = roomService.updateRoom(id, roomDto, roomImageList, userEmail);
         return ResponseEntity.ok(updatedRoom); // Trả về phòng đã cập nhật với trạng thái 200 OK
     }
-
+    //    public ResponseEntity<Void> deleteRoom(@PathVariable UUID id) {
+//        roomService.deleteRoom(id);
+//        return ResponseEntity.noContent().build(); // Trả về 204 No Content khi xóa thành công
+//    }
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('HOTEL_OWNER')")
     public ResponseEntity<Void> deleteRoom(@PathVariable UUID id) {
-        roomService.deleteRoom(id);
-        return ResponseEntity.noContent().build(); // Trả về 204 No Content khi xóa thành công
+        // Thêm log để kiểm tra roomId
+        System.out.println("Room ID to delete: " + id);
+        RoomDto room = roomService.getRoomById(id);
+
+        try {
+            if(room == null) {
+                throw new EntityNotFoundException("Room not found");
+            }
+            roomService.deleteRoom(id);
+            System.out.println("Room deleted successfully!");
+        } catch (EntityNotFoundException e) {
+            System.err.println("Error: Room not found. ID = " + id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 Not Found nếu phòng không tồn tại
+        } catch (Exception e) {
+            System.err.println("Error while deleting room: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 nếu lỗi khác
+        }
+
+        return ResponseEntity.noContent().build(); // 204 No Content nếu xóa thành công
     }
+
 
     @GetMapping("hotel/{hotelId}")
     public ResponseEntity<?> getRoomsByHotelId(@PathVariable UUID hotelId){

@@ -27,6 +27,9 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
             @Param("checkoutDate") LocalDateTime checkoutDate
     );
 
+    // Phương thức kiểm tra sự tồn tại
+    boolean existsById(UUID id);
+
 
 }
 

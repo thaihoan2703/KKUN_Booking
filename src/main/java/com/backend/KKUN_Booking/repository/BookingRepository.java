@@ -2,6 +2,7 @@ package com.backend.KKUN_Booking.repository;
 
 import com.backend.KKUN_Booking.model.Booking;
 import com.backend.KKUN_Booking.model.Room;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,5 +30,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId")
     List<Booking> findByRoomId(@Param("roomId") UUID roomId);
+
+  //  @Transactional
+//    public void deleteRoom(UUID roomId) {
+//        if (bookingRepository.existsByRoomId(roomId)) {
+//            throw new IllegalStateException("Cannot delete room. It is still referenced by bookings.");
+//        }
+//        roomRepository.deleteById(roomId);
+//    }
+
 }
 

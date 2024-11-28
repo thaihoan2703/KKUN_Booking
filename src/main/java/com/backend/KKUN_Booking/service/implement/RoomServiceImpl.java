@@ -16,6 +16,7 @@ import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.service.AmazonS3Service;
 import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.util.CommonFunction;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -88,9 +89,15 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+//    public void deleteRoom(UUID id) {
+//        roomRepository.deleteById(id);
+//    }
     public void deleteRoom(UUID id) {
-        roomRepository.deleteById(id);
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + id));
+        roomRepository.delete(room);
     }
+
 
     private User findUserByEmail(String userEmail) {
         return userRepository.findByEmail(userEmail)
