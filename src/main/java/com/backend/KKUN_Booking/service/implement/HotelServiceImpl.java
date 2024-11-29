@@ -9,6 +9,7 @@ import com.backend.KKUN_Booking.model.*;
 import com.backend.KKUN_Booking.model.enumModel.PaymentPolicy;
 import com.backend.KKUN_Booking.model.enumModel.RoleUser;
 import com.backend.KKUN_Booking.repository.AmenityRepository;
+import com.backend.KKUN_Booking.repository.BookingRepository;
 import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.service.AmazonS3Service;
@@ -20,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +34,7 @@ public class HotelServiceImpl implements HotelService {
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
     private final AmenityRepository amenityRepository;
+    private final BookingRepository bookingRepository;
     private final AmazonS3Service amazonS3Service;
 
     @Autowired
@@ -41,10 +45,11 @@ public class HotelServiceImpl implements HotelService {
 
     @Autowired
     public HotelServiceImpl(HotelRepository hotelRepository, UserRepository userRepository,
-                            AmenityRepository amenityRepository, AmazonS3Service amazonS3Service) {
+                            AmenityRepository amenityRepository, BookingRepository bookingRepository, AmazonS3Service amazonS3Service) {
         this.hotelRepository = hotelRepository;
         this.userRepository = userRepository;
         this.amenityRepository = amenityRepository;
+        this.bookingRepository = bookingRepository;
         this.amazonS3Service = amazonS3Service;
     }
 
@@ -415,4 +420,40 @@ public class HotelServiceImpl implements HotelService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
+    @Override
+    public List<HotelDto> getHotelsWithAvailableRooms(LocalDateTime checkInDate) {
+        // Get all hotels
+        List<Hotel> allHotels = hotelRepository.findAll();
+
+        // Filter hotels with available rooms
+        return allHotels.stream()
+                .filter(hotel -> checkRoomAvailability(hotel.getId(), checkInDate))
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean checkRoomAvailability(UUID hotelId, LocalDateTime checkInDate) {
+        // Tính toán ngày check-out (check-out sẽ là 1 ngày sau check-in)
+        LocalDateTime checkOutDate = checkInDate.plusDays(1);
+
+        // Kiểm tra xem ngày check-out có lớn hơn ngày check-in ít nhất 1 ngày không
+        if (checkOutDate.isBefore(checkInDate.plusDays(1))) {
+            throw new RuntimeException("Ngày check-out phải lớn hơn ngày check-in ít nhất 1 ngày.");
+        }
+
+        // Tìm khách sạn
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new RuntimeException("Khách sạn không tồn tại"));
+
+        // Kiểm tra phòng còn trống trong khoảng thời gian check-in và check-out
+        return roomService.findAvailableRooms(hotelId, checkInDate, checkOutDate).size() > 0;
+
+    }
+
+
+
 }
+
+
+{t("checkoutBooking")}

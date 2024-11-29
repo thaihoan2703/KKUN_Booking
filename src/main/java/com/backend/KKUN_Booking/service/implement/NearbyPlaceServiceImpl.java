@@ -30,7 +30,7 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
     private Set<CategoryType> categoriesWithPlaces;
 
     private enum CategoryType {
-        AMENITY, TOURISM, LEISURE, HISTORIC, PLACE, NATURAL, HEALTHCARE
+        AMENITY, TOURISM, LEISURE, HISTORIC, PLACE, NATURAL
     }
 
     @Autowired
@@ -67,7 +67,7 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
     private void validateCategoryRepresentation() {
         List<CategoryType> requiredCategories = List.of(
                 CategoryType.AMENITY, CategoryType.TOURISM, CategoryType.LEISURE,
-                CategoryType.HISTORIC, CategoryType.HEALTHCARE, CategoryType.NATURAL);
+                CategoryType.HISTORIC, CategoryType.NATURAL);
 
         String missingCategories = requiredCategories.stream()
                 .filter(type -> !categoriesWithPlaces.contains(type))
@@ -87,32 +87,23 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         if (response == null || response.elements == null) return Collections.emptyList();
 
         List<NearbyPlaceDto> tempPlaces = new ArrayList<>();
-        Map<CategoryType, Integer> categoryCount = new EnumMap<>(CategoryType.class); // Tối ưu bằng EnumMap
-        Set<String> addedAmenities = new HashSet<>(); // Sử dụng HashSet cho String
-        Map<String, Integer> tourismTypeCount = new HashMap<>(); // Đếm số lượng từng loại trong tourism
+        Map<CategoryType, Integer> categoryCount = new EnumMap<>(CategoryType.class);
+        Set<String> addedAmenities = new HashSet<>();
+        Map<String, Integer> tourismTypeCount = new HashMap<>();
 
-        response.elements.forEach(result -> processPlace(result, lat, lon, tempPlaces, categoryCount, addedAmenities, tourismTypeCount));
+        for (NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse result : response.elements) {
+            processPlace(result, lat, lon, tempPlaces, categoryCount, addedAmenities, tourismTypeCount);
+        }
+
         return filterAndSortPlaces(tempPlaces);
-    }
-
-    private String createQuery(double lat, double lon) {
-        return String.format(
-                "[out:json];(node(around:20000,%f,%f)[amenity~\"restaurant|hospital|cafe|bar|parking|cinema|fast_food|bicycle_rental|car_rental\"];"
-                        + "node(around:20000,%f,%f)[tourism~\"museum|aquarium|theatre|attraction|gallery|theme_park\"];"
-                        + "node(around:10000,%f,%f)[leisure~\"park|garden|playground|sports_centre|stadium|swimming_pool\"];"
-                        + "node(around:10000,%f,%f)[historic~\"castle\"];"
-                        + "node(around:10000,%f,%f)[place~\"square\"];"
-                        + "node(around:10000,%f,%f)[natural~\"beach|cliff|spring\"];"
-                        + "node(around:10000,%f,%f)[healthcare~\"hospital|clinic|pharmacy\"];);out;",
-                lat, lon, lat, lon, lat, lon, lat, lon, lat, lon, lat, lon, lat, lon);
     }
 
     private void processPlace(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse place,
                               double originLat, double originLon,
                               List<NearbyPlaceDto> tempPlaces,
                               Map<CategoryType, Integer> categoryCount,
-                              Set<String> addedAmenities, // Sử dụng HashSet cho String
-                              Map<String, Integer> tourismTypeCount) { // Đếm từng loại tourism
+                              Set<String> addedAmenities,
+                              Map<String, Integer> tourismTypeCount) {
         double distance = LocationUtil.calculateDistance(originLat, originLon, place.lat, place.lon);
         if (distance > 15 || place.tags == null || place.tags.name == null) return;
 
@@ -145,6 +136,41 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         }
     }
 
+    // Các phương thức còn lại giữ nguyên như trong mã gốc
+    // (createQuery, determineCategory, addPlace, mapXxxCategory, etc.)
+    private static final class QueryConfig {
+        private static final List<QueryCategory> CATEGORIES = List.of(
+                new QueryCategory("amenity", 10000,
+                        "restaurant|hospital|cafe|bar|parking|cinema|fast_food|bicycle_rental|car_rental"),
+                new QueryCategory("tourism", 20000,
+                        "museum|aquarium|theatre|attraction|gallery|theme_park"),
+                new QueryCategory("leisure", 10000,
+                        "park|garden|playground|sports_centre|stadium|swimming_pool"),
+                new QueryCategory("historic", 10000, "castle"),
+                new QueryCategory("place", 10000, "square"),
+                new QueryCategory("natural", 10000, "beach|cliff|spring")
+
+        );
+
+        private record QueryCategory(String type, int radius, String tags) {}
+    }
+
+    private String createQuery(double lat, double lon) {
+        StringBuilder queryBuilder = new StringBuilder("[out:json];(");
+
+        for (QueryConfig.QueryCategory category : QueryConfig.CATEGORIES) {
+            queryBuilder.append(String.format(
+                    "node(around:%d,%f,%f)[%s~\"%s\"];",
+                    category.radius(), lat, lon, category.type(), category.tags()
+            ));
+        }
+
+        queryBuilder.append(");out;");
+        return queryBuilder.toString();
+    }
+
+
+
     private void addPlace(List<NearbyPlaceDto> tempPlaces, NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse place, String category, double distance) {
         tempPlaces.add(new NearbyPlaceDto(place.tags.name, category, distance, place.tags));
     }
@@ -156,12 +182,11 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         if (place.tags.historic != null) return CategoryType.HISTORIC;
         if (place.tags.place != null) return CategoryType.PLACE;
         if (place.tags.natural != null) return CategoryType.NATURAL;
-        if (place.tags.healthcare != null) return CategoryType.HEALTHCARE;
+
         return null;
     }
 
     private String determineCategory(NearbyPlaceResultResponseContainer.NearbyPlaceResultResponse place) {
-        if (place.tags.healthcare != null) return mapHealthcareCategory(place.tags.healthcare);
         if (place.tags.amenity != null) return mapAmenityCategory(place.tags.amenity);
         if (place.tags.tourism != null) return mapTourismCategory(place.tags.tourism);
         if (place.tags.leisure != null) return mapLeisureCategory(place.tags.leisure);
@@ -243,12 +268,5 @@ public class NearbyPlaceServiceImpl implements NearbyPlaceService {
         };
     }
 
-    private String mapHealthcareCategory(String healthcareType) {
-        return switch (healthcareType) {
-            case "hospital" -> "Hospital";
-            case "clinic" -> "Clinic";
-            case "pharmacy" -> "Pharmacy";
-            default -> null;
-        };
-    }
+
 }

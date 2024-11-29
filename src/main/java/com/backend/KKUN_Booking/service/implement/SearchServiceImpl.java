@@ -7,6 +7,7 @@ import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.RoomRepository;
 import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.service.NearbyPlaceService;
+import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.service.SearchService;
 import com.backend.KKUN_Booking.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,8 @@ public class SearchServiceImpl implements SearchService {
 
     @Autowired
     private UserService userService;
-
+    @Autowired
+    private RoomService roomService;
     @Autowired
     public SearchServiceImpl(HotelRepository hotelRepository, RoomRepository roomRepository, UserRepository userRepository) {
         this.hotelRepository = hotelRepository;
@@ -141,12 +143,17 @@ public class SearchServiceImpl implements SearchService {
 
     private HotelSearchResultDto createHotelSearchResultDto(Hotel hotel, LocalDateTime checkInDate, LocalDateTime checkOutDate,
                                                             int guests, BigDecimal minPrice, BigDecimal maxPrice) {
-        List<Room> suitableRooms = roomRepository.findAll().stream()
-                .filter(room -> room.getCapacity() >= guests)
-                .filter(room -> isRoomWithinPriceRange(room, minPrice, maxPrice))
+        List<RoomDto> roomDtos = roomService.findAvailableRooms(hotel.getId(), checkInDate, checkOutDate).stream()
+                .filter(room -> room.getCapacity() >= guests) // Phòng có sức chứa đủ cho số lượng khách
+                .filter(room -> isRoomWithinPriceRange(room, minPrice, maxPrice)) // Phòng nằm trong phạm vi giá
                 .collect(Collectors.toList());
 
-        if (suitableRooms.isEmpty()) return null;
+        if (roomDtos.isEmpty()) return null;
+
+        // Chuyển đổi RoomDto sang Room ngay trong đây
+        List<Room> suitableRooms = roomDtos.stream()
+                .map(this::mapRoomDtoToRoom)
+                .toList();
 
         Room bestRoom = selectBestRoom(suitableRooms, guests);
         int suitabilityScore = Math.abs(bestRoom.getCapacity() - guests);
@@ -161,8 +168,8 @@ public class SearchServiceImpl implements SearchService {
         );
     }
 
-    private boolean isRoomWithinPriceRange(Room room, BigDecimal minPrice, BigDecimal maxPrice) {
-        BigDecimal price = room.getBasePrice();
+    private boolean isRoomWithinPriceRange(RoomDto roomDto, BigDecimal minPrice, BigDecimal maxPrice) {
+        BigDecimal price = roomDto.getBasePrice();
         return (minPrice == null || price.compareTo(minPrice) >= 0) &&
                 (maxPrice == null || price.compareTo(maxPrice) <= 0);
     }
@@ -209,7 +216,11 @@ public class SearchServiceImpl implements SearchService {
         hotelDto.setAmenities(hotel.getAmenities().stream().map(this::convertAmenityToDto).collect(Collectors.toList()));
         return hotelDto;
     }
-
+    private Room mapRoomDtoToRoom(RoomDto roomDto) {
+        // Tạo một đối tượng Room mới từ các thuộc tính của RoomDto
+        return roomRepository.findById(roomDto.getId())
+                .orElseThrow(() -> new RuntimeException("Room not found with id: " + roomDto.getId()));
+    }
     private RoomDto mapRoomToRoomDto(Room room) {
         RoomDto roomDto = new RoomDto();
         roomDto.setId(room.getId());
