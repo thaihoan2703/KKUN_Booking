@@ -456,4 +456,3 @@ public class HotelServiceImpl implements HotelService {
 }
 
 
-{t("checkoutBooking")}

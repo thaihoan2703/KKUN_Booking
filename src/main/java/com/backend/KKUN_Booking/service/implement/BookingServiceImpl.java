@@ -11,7 +11,9 @@ import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.repository.*;
 import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.service.BookingService;
+import com.backend.KKUN_Booking.service.NotificationService;
 import com.backend.KKUN_Booking.service.PaymentService;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 
@@ -37,8 +39,9 @@ public class BookingServiceImpl implements BookingService {
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
     private final PaymentService paymentService;
+    private final NotificationService notificationService;
 
-    public BookingServiceImpl(BookingRepository bookingRepository, RoomRepository roomRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository, PromotionRepository promotionRepository, HotelRepository hotelRepository, UserRepository userRepository, PaymentService paymentService) {
+    public BookingServiceImpl(BookingRepository bookingRepository, RoomRepository roomRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository, PromotionRepository promotionRepository, HotelRepository hotelRepository, UserRepository userRepository, PaymentService paymentService, NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.roomRepository = roomRepository;
         this.paymentRepository = paymentRepository;
@@ -47,6 +50,7 @@ public class BookingServiceImpl implements BookingService {
         this.hotelRepository = hotelRepository;
         this.userRepository = userRepository;
         this.paymentService = paymentService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -131,6 +135,13 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking savedBooking = bookingRepository.save(booking);
+        try {
+            String emailSend = booking.getBookingEmail();
+            notificationService.sendBookingConfirmation(emailSend, booking);
+        } catch (MessagingException e) {
+            // Log the error or handle it appropriately
+
+        }
         return convertToDto(savedBooking);
     }
 

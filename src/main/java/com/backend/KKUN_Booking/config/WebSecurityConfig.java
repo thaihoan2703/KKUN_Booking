@@ -75,7 +75,7 @@ public class WebSecurityConfig {
 
                         // Những route yêu cầu quyền quản trị - ADMIN
                         .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels", "/api/promotions/**").hasAuthority(RoleUser.ADMIN.name())
-                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/roles/**").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/roles/**", "/api/bookings/**").hasAuthority(RoleUser.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.ADMIN.name()) // Cho phép ADMIN quản lý mọi người dùng
 
                         // Những route khác cho RoleUser.HOTELOWNER
@@ -85,7 +85,7 @@ public class WebSecurityConfig {
 
                         // Route đặc quyền khách hàng - CUSTOMER
                         .requestMatchers(HttpMethod.GET, "/api/users/booking-hotel/history").hasAuthority(RoleUser.CUSTOMER.name())
-                        .requestMatchers("/api/wishlist/**", "/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
+                        .requestMatchers("/api/wishlist/**").hasAuthority(RoleUser.CUSTOMER.name())
 
                         // Đảm bảo các quyền còn lại là xác thực
                         .anyRequest().authenticated()

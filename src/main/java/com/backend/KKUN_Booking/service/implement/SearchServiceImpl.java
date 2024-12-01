@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.backend.KKUN_Booking.util.CommonFunction.removeAccents;
+
 @Service
 public class SearchServiceImpl implements SearchService {
 
@@ -57,12 +59,13 @@ public class SearchServiceImpl implements SearchService {
             LocalDateTime checkInDate, LocalDateTime checkOutDate, int guests, String hotelName) {
 
         // Convert hotelName to lowercase for case-insensitive search
-        String searchName = hotelName.toLowerCase();
+        String searchName = removeAccents(hotelName).toLowerCase();
 
-        // Filter hotels by name
+        // Lọc danh sách khách sạn
         List<Hotel> hotels = hotelRepository.findAll().stream()
-                .filter(hotel -> hotel.getName().toLowerCase().contains(searchName))
+                .filter(hotel -> removeAccents(hotel.getName()).toLowerCase().contains(searchName))
                 .collect(Collectors.toList());
+
 
         return hotels.stream()
                 .map(hotel -> createHotelSearchResultDto(hotel, checkInDate, checkOutDate, guests, null, null))
@@ -75,7 +78,7 @@ public class SearchServiceImpl implements SearchService {
     private List<Hotel> filterHotelsByCriteria(String location, Double rating, List<String> amenities,
                                                Boolean freeCancellation, Boolean breakfastIncluded, Boolean prePayment,
                                                BigDecimal minPrice, BigDecimal maxPrice) {
-        String[] locationKeywords = location.toLowerCase().split(",");
+        String[] locationKeywords = removeAccents(location).toLowerCase().split(",");
 
         return hotelRepository.findAll().stream()
                 .filter(hotel -> matchesLocation(hotel, locationKeywords))
@@ -89,7 +92,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private boolean matchesLocation(Hotel hotel, String[] locationKeywords) {
-        String hotelLocation = hotel.getLocation().toLowerCase();
+        String hotelLocation = removeAccents(hotel.getLocation()).toLowerCase();
         return Arrays.stream(locationKeywords).anyMatch(hotelLocation::contains);
     }
 

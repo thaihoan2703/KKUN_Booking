@@ -133,5 +133,8 @@ public class CommonFunction {
         // Kết hợp thời gian và phần mở rộng để tạo tên file duy nhất
         return "IMG_" + timeStamp + fileExtension;
     }
-
+    public static String removeAccents(String input) {
+        return Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("[^\\p{ASCII}]", ""); // Loại bỏ các ký tự không phải ASCII (dấu)
+    }
 }
