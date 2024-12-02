@@ -15,16 +15,14 @@ import com.backend.KKUN_Booking.service.NotificationService;
 import com.backend.KKUN_Booking.service.PaymentService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -265,10 +263,51 @@ public class BookingServiceImpl implements BookingService {
     public void updateBookingStatus(UUID bookingId, BookingStatus status) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        booking.setStatus(status);
-        booking.getPayment().setStatus(PaymentStatus.COMPLETED);
-        bookingRepository.save(booking);
+
+        // Chỉ cập nhật trạng thái nếu booking đã được xác nhận và thanh toán đã hoàn tất
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getPayment().getStatus() != PaymentStatus.COMPLETED) {
+            // Cập nhật trạng thái booking và thanh toán
+            booking.setStatus(status);
+            booking.getPayment().setStatus(PaymentStatus.COMPLETED);  // Assuming you're marking payment as completed again
+            bookingRepository.save(booking);
+        } else {
+            // Throw an exception or return an error response if conditions aren't met
+            throw new IllegalStateException("Booking must be confirmed and payment completed to be updated.");
+        }
     }
+
+    @Override
+    public void cancelBooking(UUID bookingId, String userEmail) {
+        // Fetch booking by bookingId
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Fetch the user by email (to check authorization)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Check if the user is the owner of the hotel where the booking was made
+        if (!booking.getRoom().getHotel().getOwner().equals(user)) {
+            throw new IllegalStateException("User is not authorized to cancel this booking.");
+        }
+
+        // Only allow cancellation if the check-in date has passed
+        boolean isValidated = booking.getCheckinDate().isAfter(LocalDateTime.now());
+        if (isValidated) {
+            // Update the booking status to CANCELLED
+            booking.setStatus(BookingStatus.CANCELLED);
+
+            // Optionally update the payment status (if needed)
+            // booking.getPayment().setStatus(PaymentStatus.CANCELLED);
+
+            // Save the updated booking
+            bookingRepository.save(booking);
+        } else {
+            // Throw an exception if the check-in date is in the future
+            throw new IllegalStateException("Booking cannot be cancelled as the check-in date is in the future.");
+        }
+    }
+
 
     @Override
     public BookingDto updateBooking(UUID id, BookingDto bookingDto, String userEmail) {

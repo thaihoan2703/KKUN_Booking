@@ -20,6 +20,6 @@ public interface PaymentService {
     void processCheckout(UUID paymentId);
     PaymentResponse.BaseResponse initiatePayment(PaymentDto paymentDto, HttpServletRequest request);
     PaymentResponse.BaseResponse processPaymentCallback(String paymentProvider, Map<String, String> callbackParams,HttpServletRequest request );
-
+    List<PaymentDto> getPaymentsByHotel(UUID hotelId,String userEmail);
 }
 

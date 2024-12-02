@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,17 @@ public class PaymentController {
     @GetMapping("/{id}")
     public PaymentDto getPaymentById(@PathVariable UUID id) {
         return paymentService.getPaymentById(id);
+    }
+
+    @GetMapping("/hotels/{hotelId}")
+    public ResponseEntity<List<PaymentDto>> getPaymentsByHotel(@PathVariable UUID hotelId, Principal principal) {
+        String userEmail = principal.getName();
+
+        // Call the service to get the payments for the hotel
+        List<PaymentDto> paymentDtos = paymentService.getPaymentsByHotel(hotelId, userEmail);
+
+        // Return ResponseEntity with HTTP status OK (200) and the list of PaymentDto
+        return ResponseEntity.ok(paymentDtos);
     }
 
     @PostMapping

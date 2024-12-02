@@ -2,6 +2,7 @@ package com.backend.KKUN_Booking.controller;
 
 import com.backend.KKUN_Booking.dto.BookingDto;
 import com.backend.KKUN_Booking.dto.PaymentDto;
+import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.security.JwtTokenProvider;
@@ -141,6 +142,28 @@ public class BookingController {
         String userEmail = principal.getName();  // Lấy email hoặc username từ authentication
         BookingDto updatedBooking = bookingService.updateBooking(id, bookingDto, userEmail);
         return ResponseEntity.ok(updatedBooking);
+    }
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelBooking(@PathVariable UUID id, Principal principal) {
+        // Lấy email hoặc username từ principal
+        String userEmail = principal.getName();
+
+        try {
+            // Cập nhật trạng thái booking thành CANCELLED
+
+
+            bookingService.cancelBooking(id,userEmail);
+            // Nếu không có lỗi xảy ra, trả về thông báo thành công với mã HTTP 200
+            return ResponseEntity.ok("Booking has been successfully cancelled.");
+        } catch (IllegalStateException ex) {
+            // Trường hợp không tìm thấy booking với id
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Booking not found with ID: " + id);
+        } catch (Exception ex) {
+            // Xử lý lỗi chung
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while processing the cancellation.");
+        }
     }
 
     @DeleteMapping("/{id}")

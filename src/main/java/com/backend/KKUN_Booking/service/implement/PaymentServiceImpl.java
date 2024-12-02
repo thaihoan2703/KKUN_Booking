@@ -4,13 +4,16 @@ import com.backend.KKUN_Booking.config.payment.VNPayConfig;
 import com.backend.KKUN_Booking.dto.PaymentDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
 import com.backend.KKUN_Booking.model.Booking;
+import com.backend.KKUN_Booking.model.Hotel;
 import com.backend.KKUN_Booking.model.Payment;
 import com.backend.KKUN_Booking.model.User;
 import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentType;
 import com.backend.KKUN_Booking.repository.BookingRepository;
+import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.PaymentRepository;
+import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.service.BookingService;
 import com.backend.KKUN_Booking.service.NotificationService;
@@ -34,6 +37,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final HotelRepository hotelRepository;
+    private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
 
     private final NotificationService notificationService;
@@ -45,9 +50,11 @@ public class PaymentServiceImpl implements PaymentService {
     private BookingService bookingService;
     @Autowired
     private PaymentService paymentService;
-    public PaymentServiceImpl(PaymentRepository paymentRepository, BookingRepository bookingRepository, VNPayConfig vnPayConfig,NotificationService notificationService ) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, BookingRepository bookingRepository, HotelRepository hotelRepository, UserRepository userRepository, VNPayConfig vnPayConfig, NotificationService notificationService ) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
+        this.hotelRepository = hotelRepository;
+        this.userRepository = userRepository;
         this.vnPayConfig = vnPayConfig;
         this.notificationService =notificationService;
     }
@@ -102,6 +109,32 @@ public class PaymentServiceImpl implements PaymentService {
         // Lưu lại trang thai thanh toán và booking
         paymentRepository.save(payment);
 
+    }
+
+    @Override
+    public List<PaymentDto> getPaymentsByHotel(UUID hotelId, String userEmail) {
+        // Find the user (for authorization check if needed)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Optional: Check if user is authorized to access the hotel (e.g., only hotel owners/admins can view payments)
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found"));
+
+        // Check if the user is the owner or an admin (authorization)
+        if (!hotel.getOwner().equals(user)) {
+            throw new IllegalStateException("User is not authorized to view payments for this hotel");
+        }
+
+        // Fetch all payments associated with this hotel
+        List<Payment> payments = paymentRepository.findByHotelId(hotelId);
+
+        // Map the list of Payment entities to PaymentDto objects
+        List<PaymentDto> paymentDtos = payments.stream()
+                .map(this::convertToDto)  // Use the convertToDto method
+                .collect(Collectors.toList());
+
+        return paymentDtos;
     }
 
 
