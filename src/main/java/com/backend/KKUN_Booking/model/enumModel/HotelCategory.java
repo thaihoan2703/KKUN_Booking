@@ -6,6 +6,7 @@ public enum HotelCategory {
     KHACH_SAN_3_SAO("Khách sạn 3 sao"),
     KHACH_SAN("Khách sạn"),
     RESORT("Resort"),
+    HOME_STAY("Home stay"),
     NHA_NGHI("Nhà nghỉ");
 
     private final String displayName;

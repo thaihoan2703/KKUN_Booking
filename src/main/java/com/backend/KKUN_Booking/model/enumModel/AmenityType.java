@@ -14,7 +14,7 @@ public enum AmenityType {
     PET_FRIENDLY("Thân thiện với vật nuôi"),
     TRANSPORT("Dịch vụ vận chuyển"),
     DINING("Ăn uống"),
-    LAUNDRY("Dịch vụ giặt là"),
+   // LAUNDRY("Dịch vụ giặt là"),
     WIFI("Wi-Fi");
 
     private final String displayName;
