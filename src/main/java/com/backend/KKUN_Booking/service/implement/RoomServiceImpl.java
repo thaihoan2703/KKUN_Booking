@@ -229,6 +229,10 @@ public class RoomServiceImpl implements RoomService {
         roomDto.setAvailable(room.getAvailable());
         roomDto.setHotelId(room.getHotel().getId());
         roomDto.setRoomImages(room.getRoomImages());
+
+        int numOfReviews = (room.getBookings() != null) ? room.getBookings().size() : 0;        // assuming 'getBookings()' returns a list of bookings
+        roomDto.setNumOfReviews(numOfReviews);
+
         roomDto.setBedType(room.getBedType()); // Gán loại giường vào DTO
         roomDto.setBedCount(room.getBedCount()); // Gán số lượng giường vào DTO
         roomDto.setArea(room.getArea());

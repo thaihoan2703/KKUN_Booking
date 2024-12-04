@@ -165,7 +165,28 @@ public class BookingController {
                     .body("An error occurred while processing the cancellation.");
         }
     }
+    @PutMapping("/{id}/confirmed")
+    public ResponseEntity<?> cconfirmedBooking(@PathVariable UUID id, Principal principal) {
+        // Lấy email hoặc username từ principal
+        String userEmail = principal.getName();
 
+        try {
+            // Cập nhật trạng thái booking thành confirmed
+
+
+            bookingService.confirmedBooking(id,userEmail);
+            // Nếu không có lỗi xảy ra, trả về thông báo thành công với mã HTTP 200
+            return ResponseEntity.ok("Booking has been successfully confirmed.");
+        } catch (IllegalStateException ex) {
+            // Trường hợp không tìm thấy booking với id
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Booking not found with ID: " + id);
+        } catch (Exception ex) {
+            // Xử lý lỗi chung
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while processing the cancellation.");
+        }
+    }
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBooking(@PathVariable UUID id) {
         bookingService.deleteBooking(id);

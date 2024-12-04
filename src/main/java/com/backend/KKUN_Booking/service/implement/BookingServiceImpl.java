@@ -307,7 +307,25 @@ public class BookingServiceImpl implements BookingService {
             throw new IllegalStateException("Booking cannot be cancelled as the check-in date is in the future.");
         }
     }
+    @Override
+    public void confirmedBooking(UUID bookingId, String userEmail) {
+        // Fetch booking by bookingId
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
+        // Fetch the user by email (to check authorization)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Check if the user is the owner of the hotel where the booking was made
+        if (!booking.getRoom().getHotel().getOwner().equals(user)) {
+            throw new IllegalStateException("User is not authorized to cancel this booking.");
+        }
+
+            booking.setStatus(BookingStatus.CONFIRMED);
+
+            bookingRepository.save(booking);
+    }
 
     @Override
     public BookingDto updateBooking(UUID id, BookingDto bookingDto, String userEmail) {

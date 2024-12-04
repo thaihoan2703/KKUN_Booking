@@ -80,10 +80,10 @@ public class WebSecurityConfig {
 
                         // Những route khác cho RoleUser.HOTELOWNER
                         .requestMatchers(HttpMethod.POST, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
-                        .requestMatchers(HttpMethod.PUT, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/hotels/**", "/api/rooms/**", "/api/payments/**","/api/bookings/**").hasAuthority(RoleUser.HOTELOWNER.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
 
-                        .requestMatchers(HttpMethod.PUT, "/api/bookings/**").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/{id}").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name())
                         // Route đặc quyền khách hàng - CUSTOMER
                         .requestMatchers(HttpMethod.GET, "/api/users/booking-hotel/history").hasAuthority(RoleUser.CUSTOMER.name())
                         .requestMatchers("/api/wishlist/**").hasAuthority(RoleUser.CUSTOMER.name())

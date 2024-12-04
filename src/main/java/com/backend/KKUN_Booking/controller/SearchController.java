@@ -3,10 +3,13 @@ package com.backend.KKUN_Booking.controller;
 
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.HotelSearchResultDto;
+import com.backend.KKUN_Booking.dto.RoomDto;
 import com.backend.KKUN_Booking.dto.UserDto;
 import com.backend.KKUN_Booking.model.Hotel;
+import com.backend.KKUN_Booking.model.Room;
 import com.backend.KKUN_Booking.security.UserDetailsImpl;
 import com.backend.KKUN_Booking.service.HotelService;
+import com.backend.KKUN_Booking.service.RoomService;
 import com.backend.KKUN_Booking.service.SearchService;
 import com.backend.KKUN_Booking.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +36,8 @@ public class SearchController {
     private UserService userService;
     @Autowired
     private SearchService searchService;
-
+    @Autowired
+    private RoomService roomService;
     @GetMapping("/hotels")
     public ResponseEntity<List<HotelSearchResultDto>> searchHotels(
             @RequestParam String location,
@@ -85,5 +89,23 @@ public class SearchController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
+    }
+
+    @GetMapping("/room-qualities")
+    public ResponseEntity<List<RoomDto>> searchRoomsByAttribute(@RequestParam String location,
+                                                  @RequestParam LocalDateTime checkInDate,
+                                                  @RequestParam LocalDateTime checkOutDate,
+                                                  @RequestParam int guests,
+                                                  @RequestParam(required = false) String roomType,
+                                                  @RequestParam(required = false) String bedType) {
+        List<RoomDto> roomDtos = searchService.searchRoomsByAttributes(location,checkInDate,checkOutDate,guests,roomType, bedType);
+
+        // Nếu không tìm thấy phòng, trả về HTTP 404 (Not Found)
+        if (roomDtos.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        // Nếu tìm thấy phòng, trả về HTTP 200 (OK) cùng với dữ liệu
+        return new ResponseEntity<>(roomDtos, HttpStatus.OK);
     }
 }

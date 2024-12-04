@@ -17,6 +17,8 @@ public interface BookingService {
     BookingDto updateBooking(UUID id, BookingDto bookingDto, String userEmail);
     void deleteBooking(UUID id);
     void cancelBooking(UUID bookingId,String userEmail);
+    void confirmedBooking(UUID bookingId,String userEmail);
+
     PaymentResponse.BaseResponse initiatePayment(UUID bookingId, PaymentType paymentType, HttpServletRequest request);
     void updateBookingStatus(UUID bookingId, BookingStatus status);
     void markBookingAsReviewed(UUID bookingId);

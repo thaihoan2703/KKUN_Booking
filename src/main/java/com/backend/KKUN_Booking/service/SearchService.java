@@ -1,6 +1,8 @@
 package com.backend.KKUN_Booking.service;
 
 import com.backend.KKUN_Booking.dto.HotelSearchResultDto;
+import com.backend.KKUN_Booking.dto.RoomDto;
+import com.backend.KKUN_Booking.model.Room;
 import org.springframework.web.bind.annotation.RequestParam;
 import software.amazon.ion.Decimal;
 
@@ -15,4 +17,10 @@ public interface SearchService {
 
     List<HotelSearchResultDto> searchHotelsByName( LocalDateTime checkInDate, LocalDateTime checkOutDate, int guests,
                                                    String location);
+    List<RoomDto> searchRoomsByAttributes(String location,
+                                          LocalDateTime checkInDate,
+                                          LocalDateTime checkOutDate,
+                                          int guests,
+                                          String roomTypeDisplayName,
+                                          String bedTypeDisplayName);
 }

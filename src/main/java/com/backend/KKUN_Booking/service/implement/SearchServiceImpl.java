@@ -2,6 +2,8 @@ package com.backend.KKUN_Booking.service.implement;
 
 import com.backend.KKUN_Booking.dto.*;
 import com.backend.KKUN_Booking.model.*;
+import com.backend.KKUN_Booking.model.enumModel.BedType;
+import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.model.reviewAbstract.RoomReview;
 import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.RoomRepository;
@@ -99,22 +101,108 @@ public class SearchServiceImpl implements SearchService {
     private boolean hasRequiredAmenities(Hotel hotel, List<String> amenities) {
         if (amenities == null || amenities.isEmpty()) return true;
 
-        // Chuẩn hóa danh sách tiện ích khách sạn
+        // Normalize hotel amenities (convert to lowercase, remove special characters)
         List<String> hotelAmenities = hotel.getAmenities().stream()
-                .map(amenity -> amenity.getName().toLowerCase()) // Convert to lowercase
+                .map(amenity -> normalizeString(amenity.getName()))  // Normalize hotel amenities
                 .collect(Collectors.toList());
 
-        // Chuẩn hóa danh sách tiện ích yêu cầu
+        // Normalize the input amenities
         List<String> normalizedAmenities = amenities.stream()
-                .map(String::toLowerCase) // Convert to lowercase
+                .map(this::normalizeString)  // Normalize user input
                 .collect(Collectors.toList());
 
-        // Kiểm tra nếu tất cả tiện ích yêu cầu xuất hiện dưới dạng chứa trong tên tiện ích khách sạn
+        // Get synonym map to check for similar terms
+        Map<String, List<String>> synonymMap = getSynonymMap();
+
+        // Check if all required amenities are present in the hotel's amenities
         return normalizedAmenities.stream()
                 .allMatch(requiredAmenity ->
-                        hotelAmenities.stream().anyMatch(hotelAmenity -> hotelAmenity.contains(requiredAmenity))
+                        hotelAmenities.stream().anyMatch(hotelAmenity ->
+                                matchesAmenity(hotelAmenity, requiredAmenity, synonymMap)
+                        )
                 );
     }
+
+    /**
+     * Normalize the amenity string by converting it to lowercase and removing special characters.
+     */
+    private String normalizeString(String input) {
+        if (input == null) return "";
+        return input.toLowerCase().replaceAll("[^a-z0-9]", ""); // Remove non-alphanumeric characters
+    }
+
+    /**
+     * Match amenities by checking if the hotel amenity matches the required one,
+     * including checking synonyms.
+     */
+    private boolean matchesAmenity(String hotelAmenity, String requiredAmenity, Map<String, List<String>> synonymMap) {
+        // First, check if the exact normalized name matches
+        if (hotelAmenity.equals(requiredAmenity)) {
+            return true;
+        }
+
+        // Then, check if the required amenity matches any of the synonyms for the hotel amenity
+        if (synonymMap.containsKey(requiredAmenity)) {
+            List<String> synonyms = synonymMap.get(requiredAmenity);
+            return synonyms.stream().anyMatch(synonym -> hotelAmenity.contains(synonym));
+        }
+
+        // Finally, check if the required amenity is part of the hotel's amenity (substring match)
+        return hotelAmenity.contains(requiredAmenity);
+    }
+
+    /**
+     * Example synonym map: You can expand this as needed.
+     */
+    private Map<String, List<String>> getSynonymMap() {
+        Map<String, List<String>> synonyms = new HashMap<>();
+
+        // Example: Wi-Fi synonyms (English + Vietnamese)
+        synonyms.put("wifi", Arrays.asList("wi-fi", "wireless internet", "internet", "wi fi", "wifi", "mạng không dây", "internet không dây"));
+
+        // Example: Air Conditioning synonyms (English + Vietnamese)
+        synonyms.put("air conditioner", Arrays.asList("ac", "air conditioning", "air-conditioner", "máy lạnh", "điều hòa", "máy điều hòa"));
+
+        // Example: Parking synonyms (English + Vietnamese)
+        synonyms.put("parking", Arrays.asList("free parking", "parking included", "on-site parking", "bãi đỗ xe", "đậu xe miễn phí", "chỗ đậu xe"));
+
+        // Example: Breakfast synonyms (English + Vietnamese)
+        synonyms.put("breakfast", Arrays.asList("continental breakfast", "included breakfast", "free breakfast", "bữa sáng", "sáng miễn phí"));
+
+        // Example: Swimming Pool synonyms (English + Vietnamese)
+        synonyms.put("swimming pool", Arrays.asList("pool", "swimming pool", "bể bơi", "hồ bơi"));
+
+        // Example: Gym synonyms (English + Vietnamese)
+        synonyms.put("gym", Arrays.asList("fitness center", "gym", "workout room", "phòng gym", "phòng thể dục"));
+
+        // Example: Restaurant synonyms (English + Vietnamese)
+        synonyms.put("restaurant", Arrays.asList("restaurant", "dining", "đồ ăn", "nhà hàng", "quán ăn"));
+
+        // Example: Spa synonyms (English + Vietnamese)
+        synonyms.put("spa", Arrays.asList("spa", "wellness center", "massage", "mát xa", "trung tâm spa", "khu spa"));
+
+        // Example: Pet-Friendly synonyms (English + Vietnamese)
+        synonyms.put("pet friendly", Arrays.asList("pet friendly", "pets allowed", "chấp nhận thú cưng", "cho phép vật nuôi"));
+
+        // Example: Elevator synonyms (English + Vietnamese)
+        synonyms.put("elevator", Arrays.asList("elevator", "lift", "thang máy"));
+
+        // Example: Non-smoking Room synonyms (English + Vietnamese)
+        synonyms.put("non-smoking room", Arrays.asList("non-smoking room", "phòng không hút thuốc", "phòng cấm hút thuốc"));
+
+        // Example: Airport Shuttle synonyms (English + Vietnamese)
+        synonyms.put("airport shuttle", Arrays.asList("airport shuttle", "shuttle service", "dịch vụ đưa đón sân bay"));
+
+        // Example: Room Service synonyms (English + Vietnamese)
+        synonyms.put("room service", Arrays.asList("room service", "dịch vụ phòng"));
+
+        // Add more synonym mappings as needed
+
+        return synonyms;
+    }
+
+
+
 
     private boolean hasRoomWithinPriceRange(Hotel hotel, BigDecimal minPrice, BigDecimal maxPrice) {
         return hotel.getRooms().stream()
@@ -228,6 +316,10 @@ public class SearchServiceImpl implements SearchService {
         RoomDto roomDto = new RoomDto();
         roomDto.setId(room.getId());
         roomDto.setType(room.getType());
+        roomDto.setBedType(room.getBedType());
+        roomDto.setArea(room.getArea());
+        roomDto.setHotelId(room.getHotel().getId());
+
         roomDto.setCapacity(room.getCapacity());
         roomDto.setBasePrice(room.getBasePrice());
         roomDto.setAvailable(room.getAvailable());
@@ -250,5 +342,25 @@ public class SearchServiceImpl implements SearchService {
         int totalReviews = (int) hotel.getRooms().stream().flatMap(room -> room.getReviews().stream()).count();
 
         return totalReviews > 0 ? Math.min((totalRating / totalReviews) * 2, 10.0) : 0.0;
+    }
+
+    public List<RoomDto> searchRoomsByAttributes(String location,
+                                                 LocalDateTime checkInDate,
+                                                 LocalDateTime checkOutDate,
+                                                 int guests,
+                                                 String roomTypeDisplayName,
+                                                 String bedTypeDisplayName) {
+
+        // Chuyển đổi roomType và bedType thành enum nếu có (nếu người dùng nhập là chuỗi)
+        String roomType = roomTypeDisplayName != null ? RoomType.fromDisplayName(roomTypeDisplayName) : null;
+        String bedType = bedTypeDisplayName != null ? BedType.fromDisplayName(bedTypeDisplayName) : null;
+
+        // Tìm kiếm các phòng từ repository với các tham số đã cung cấp
+        List<Room> rooms = roomRepository.searchRoomsByAttributes(location, roomType, bedType,guests,checkInDate,checkOutDate);
+
+        // Chuyển đổi từ Room entity sang RoomDto
+        return rooms.stream()
+                .map(this::mapRoomToRoomDto)
+                .collect(Collectors.toList());
     }
 }
