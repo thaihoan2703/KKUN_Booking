@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -101,6 +102,7 @@ public class BookingController {
         PaymentDto paymentData = new PaymentDto();
         paymentData.setBookingId(bookingId);
         paymentData.setId(bookingDto.getPayment().getId());
+        paymentData.setPaymentDate(LocalDateTime.now());
         paymentData.setPaymentType(bookingDto.getPayment().getPaymentType());
         paymentData.setAmount(bookingDto.getPayment().getAmount());
 

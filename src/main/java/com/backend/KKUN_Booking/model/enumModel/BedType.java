@@ -35,20 +35,19 @@ public enum BedType {
 
         int minDistance = Integer.MAX_VALUE;
         BedType closestMatch = null;
-        int threshold = 3; // Ngưỡng khoảng cách Levenshtein
 
         for (BedType bedType : BedType.values()) {
             // Tính khoảng cách Levenshtein giữa từ khóa và tên hiển thị của từng giá trị enum
             int distance = StringUtils.getLevenshteinDistance(bedType.getDisplayName().toLowerCase(), displayName.toLowerCase());
 
-            // Chỉ chấp nhận kết quả nếu khoảng cách thấp hơn ngưỡng
-            if (distance < minDistance && distance <= threshold) {
+            // Cập nhật nếu tìm thấy khoảng cách nhỏ hơn
+            if (distance < minDistance) {
                 minDistance = distance;
                 closestMatch = bedType;
             }
         }
 
-        // Nếu không có kết quả gần đúng, throw exception
+        // Nếu không tìm thấy giá trị gần đúng hợp lệ
         if (closestMatch == null) {
             throw new IllegalArgumentException("Unknown display name: " + displayName);
         }

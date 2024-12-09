@@ -184,14 +184,33 @@ public class PaymentServiceImpl implements PaymentService {
                     .message("This payment has already been processed.")
                     .build();
         }
-        // Fetch booking details using bookingId
-        PaymentProvider provider = paymentProviderFactory.getPaymentProvider(paymentDto.getPaymentType(), request);
-        PaymentResponse.BaseResponse response = provider.initiatePayment(paymentDto);
+        try {
+            // Fetch booking details using bookingId
+            PaymentProvider provider = paymentProviderFactory.getPaymentProvider(paymentDto.getPaymentType(), request);
+            PaymentResponse.BaseResponse response = provider.initiatePayment(paymentDto);
 
-        // Update payment transaction
-        paymentService.updatePayment(paymentDto.getId(),paymentDto);
+            if (response.getCode() == "200") {
+                // Update the payment status to 'initiated' or 'pending'
+                existingPayment.setStatus(PaymentStatus.PENDING);
+                // Update payment transaction
+                paymentService.updatePayment(paymentDto.getId(),paymentDto);
 
-        return response;
+
+                return response;
+            } else {
+                // Handle failure to initiate payment (e.g., provider issues, network errors)
+                return PaymentResponse.BaseResponse.builder()
+                        .code("payment_failed")
+                        .message("Failed to initiate payment. Please try again later.")
+                        .build();
+            }
+        } catch (Exception e) {
+            // Handle any unexpected errors during the payment initiation process
+            return PaymentResponse.BaseResponse.builder()
+                    .code("error")
+                    .message("An error occurred while reinitiating the payment: " + e.getMessage())
+                    .build();
+        }
     }
 
     @Override
