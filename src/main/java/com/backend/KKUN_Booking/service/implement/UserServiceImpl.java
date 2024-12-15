@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public UserDto createUser(UserDto userDto) {
         if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-            throw new UserAlreadyExistsException("Email already in use");
+            throw new UserAlreadyExistsException("Email này đã tồn tai");
         }
 
         // Proceed with user creation
@@ -230,29 +230,55 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }
     }
     private void updateCommonFields(User user, UserDto userDto, MultipartFile profileImage) {
-        if (userDto.getFirstName() != null) user.setFirstName(userDto.getFirstName());
-        if (userDto.getLastName() != null) user.setLastName(userDto.getLastName());
-        if (userDto.getAlias() != null) user.setAlias(userDto.getAlias());
-        if (userDto.getAddress() != null) user.setAddress(userDto.getAddress());
-        if (userDto.getPhone() != null) user.setPhone(userDto.getPhone());
+        // Cập nhật nếu tên khác
+        if (userDto.getFirstName() != null && !userDto.getFirstName().equals(user.getFirstName())) {
+            user.setFirstName(userDto.getFirstName());
+        }
 
+        // Cập nhật nếu họ khác
+        if (userDto.getLastName() != null && !userDto.getLastName().equals(user.getLastName())) {
+            user.setLastName(userDto.getLastName());
+        }
+
+        // Cập nhật nếu alias khác
+        if (userDto.getAlias() != null && !userDto.getAlias().equals(user.getAlias())) {
+            user.setAlias(userDto.getAlias());
+        }
+
+        // Cập nhật nếu địa chỉ khác
+        if (userDto.getAddress() != null && !userDto.getAddress().equals(user.getAddress())) {
+            user.setAddress(userDto.getAddress());
+        }
+
+        // Cập nhật nếu số điện thoại khác
+        if (userDto.getPhone() != null && !userDto.getPhone().equals(user.getPhone())) {
+            user.setPhone(userDto.getPhone());
+        }
+
+        // Cập nhật ảnh đại diện nếu có ảnh mới và ảnh không trống
         if (profileImage != null && !profileImage.isEmpty()) {
             String imagePath = saveProfileImage(userDto, profileImage);
             user.setAvatar(imagePath);
         }
 
-        if (userDto.getStatus() != null) user.setStatus(userDto.getStatus());
+        // Cập nhật trạng thái nếu khác
+        if (userDto.getStatus() != null && userDto.getStatus() != user.getStatus()) {
+            user.setStatus(userDto.getStatus());
+        }
 
-        if (userDto.getRoleId() != null) {
+        // Cập nhật vai trò nếu khác
+        if (userDto.getRoleId() != null && !userDto.getRoleId().equals(user.getRole().getId())) {
             Role role = roleRepository.findById(userDto.getRoleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
             user.setRole(role);
         }
 
-        if (userDto.getPassword() != null) {
+        // Cập nhật mật khẩu nếu khác
+        if (userDto.getPassword() != null && !passwordEncoder.matches(userDto.getPassword(), user.getPassword())) {
             user.setPassword(passwordEncoder.encode(userDto.getPassword()));
         }
     }
+
     private void updateAdminFields(AdminUser user, AdminUserDto dto) {
 
     }

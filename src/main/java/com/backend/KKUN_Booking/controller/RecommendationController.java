@@ -44,4 +44,10 @@ public class RecommendationController {
         List<HotelDto> trendingDestinations = recommendationService.getTrendingDestinations();
         return ResponseEntity.ok(trendingDestinations);
     }
+
+    @GetMapping("/available")
+    public ResponseEntity<List<HotelDto>> getAvailableHotelsForToday() {
+        List<HotelDto> availableHotelsForToday = recommendationService.getAvailableHotelsForToday();
+        return ResponseEntity.ok(availableHotelsForToday);
+    }
 }

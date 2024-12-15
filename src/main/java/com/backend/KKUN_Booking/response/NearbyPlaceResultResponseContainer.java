@@ -22,27 +22,33 @@ public class NearbyPlaceResultResponseContainer {
         @JsonIgnoreProperties(ignoreUnknown = true)
         @Data
         public static class Tags {
-            public String amenity; // Loại địa điểm (ví dụ: restaurant)
-            public String check_date; // Ngày kiểm tra
-            public String contact_facebook; // Liên kết Facebook
-            public String contact_instagram; // Liên kết Instagram
-            public String contact_twitter; // Liên kết Twitter
-            public String cuisine; // Ẩm thực
-            public String currency; // Loại tiền tệ
-            public String name; // Tên địa điểm
-            public String name_en; // Tên địa điểm Tieng Anh
-            public String tourism; // diem nhan
-            public String opening_hours; // Giờ mở cửa
-            public String payment_lightning; // Thanh toán bằng Lightning
-            public String payment_lightning_contactless; // Thanh toán không tiếp xúc
-            public String payment_onchain; // Thanh toán On-chain
-            public String phone; // Số điện thoại
-            public String website; // Liên kết trang web
-            public String addr_city; // Tên thành phố
-            public String addr_district; // Quận
-            public String addr_housenumber; // Số nhà
-            public String addr_street; // Đường
-            public String addr_subdistrict; // Phường
+            public String amenity; // Loại tiện ích (ví dụ: restaurant)
+            public String tourism; // Địa điểm du lịch (ví dụ: hotel, museum)
+            public String leisure; // Tiện ích giải trí (ví dụ: park, stadium)
+            public String historic; // Di tích lịch sử (ví dụ: monument, ruins)
+            public String natural; // Đặc điểm tự nhiên (ví dụ: beach, cliff)
+            public String place; // Địa danh (ví dụ: square, locality)
+            public String healthcare; // Địa danh (ví dụ: benh vien)
+
+            public String check_date;
+            public String contact_facebook;
+            public String contact_instagram;
+            public String contact_twitter;
+            public String cuisine;
+            public String currency;
+            public String name;
+            public String name_en;
+            public String opening_hours;
+            public String payment_lightning;
+            public String payment_lightning_contactless;
+            public String payment_onchain;
+            public String phone;
+            public String website;
+            public String addr_city;
+            public String addr_district;
+            public String addr_housenumber;
+            public String addr_street;
+            public String addr_subdistrict;
         }
     }
 }

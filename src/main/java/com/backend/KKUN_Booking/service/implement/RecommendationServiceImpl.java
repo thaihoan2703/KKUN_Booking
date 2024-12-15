@@ -1,5 +1,6 @@
 package com.backend.KKUN_Booking.service.implement;
 
+import com.backend.KKUN_Booking.dto.AmenityDto;
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.UserDto;
 import com.backend.KKUN_Booking.model.Hotel;
@@ -13,6 +14,8 @@ import com.backend.KKUN_Booking.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +25,13 @@ import java.util.stream.Collectors;
 @Service
 public class RecommendationServiceImpl implements RecommendationService {
     private final UserRepository userRepository;
-    private final HotelService hotelService ;
+    private final HotelService hotelService;
     private final UserService userService;
     private final AmenityService amenityService;
 
     @Autowired
-    public RecommendationServiceImpl(UserRepository userRepository, HotelService hotelService, UserService userService, AmenityService amenityService) {
+    public RecommendationServiceImpl(UserRepository userRepository, HotelService hotelService,
+                                     UserService userService, AmenityService amenityService) {
         this.userRepository = userRepository;
         this.hotelService = hotelService;
         this.userService = userService;
@@ -38,10 +42,11 @@ public class RecommendationServiceImpl implements RecommendationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<HotelDto> allHotels = hotelService.getAllHotels();
+        LocalDateTime checkInDate = LocalDateTime.now(); // Today's date
+        List<HotelDto> availableHotels = hotelService.getHotelsWithAvailableRooms(checkInDate);
         Map<HotelDto, Double> hotelScores = new HashMap<>();
 
-        for (HotelDto hotel : allHotels) {
+        for (HotelDto hotel : availableHotels) {
             double score = calculateHotelScore(user, hotel);
             hotelScores.put(hotel, score);
         }
@@ -64,16 +69,14 @@ public class RecommendationServiceImpl implements RecommendationService {
             score += 2.0;
         }
 
-        // Check preferred amenities (you may need to retrieve actual amenities based on amenityIds)
-        List<String> hotelAmenities = amenityService.getAmenitiesByIds(hotelDto.getAmenityIds()); // Assuming you have a service to fetch amenities
-        score += user.getPreferredAmenities().stream()
-                .filter(amenity -> hotelAmenities.contains(amenity))
-                .count() * 0.5;
+        // Check preferred amenities using the new AmenityDto structure
+        List<String> hotelAmenityNames = hotelDto.getAmenities().stream()
+                .map(AmenityDto::getName)
+                .collect(Collectors.toList());
 
-        // Check travel style
-        // if (user.getTravelStyle().equalsIgnoreCase(hotel.getStyle())) {
-        //     score += 1.5;
-        // }
+        score += user.getPreferredAmenities().stream()
+                .filter(preferredAmenity -> hotelAmenityNames.contains(preferredAmenity))
+                .count() * 0.5;
 
         // Check recent searches
         List<String> recentSearches = userService.getRecentSearches(user.getId());
@@ -89,18 +92,39 @@ public class RecommendationServiceImpl implements RecommendationService {
             score += 2.0;
         }
 
+        // Bonus points for available rooms today
+        score += 1.5;
+
         return score;
     }
 
+    public List<HotelDto> getAvailableHotelsForToday() {
+        LocalDateTime checkInDate = LocalDateTime.now(); // Today's date
+        return hotelService.getHotelsWithAvailableRooms(checkInDate)
+                .stream()
+                .limit(10)
+                .collect(Collectors.toList());
+    }
+
     public List<HotelDto> getTopRatingHotels() {
-        // This method could be implemented to return a list of generally popular hotels
-        // based on overall ratings, number of bookings, etc.
-        return hotelService.findTopHotelsByRating(10);
+        // Filter top-rated hotels with available rooms for today
+        LocalDateTime checkInDate = LocalDateTime.now();
+        return hotelService.findTopHotelsByRating(10).stream()
+                .filter(hotel -> hotelService.checkRoomAvailability(hotel.getId(), checkInDate))
+                .limit(10)
+                .collect(Collectors.toList());
     }
 
     public List<HotelDto> getTrendingDestinations() {
-        // This method could be implemented to return hotels in currently trending destinations
-        // based on recent bookings, seasonal popularity, etc.
-        return hotelService.findTrendingDestinations(10);
+        // Get trending destinations with available rooms for today
+        LocalDateTime checkInDate = LocalDateTime.now();
+        return hotelService.findTrendingDestinations(10).stream()
+                .filter(hotel -> {
+                    boolean isAvailable = hotelService.checkRoomAvailability(hotel.getId(), checkInDate);
+                    System.out.println("Room availability for " + hotel.getName() + ": " + isAvailable);  // Log kết quả availability
+                    return isAvailable;
+                })
+                .limit(10)
+                .collect(Collectors.toList());
     }
 }

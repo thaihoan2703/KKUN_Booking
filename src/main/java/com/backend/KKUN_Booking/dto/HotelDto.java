@@ -16,14 +16,19 @@ public class HotelDto {
     private UUID id;
     private String name;
     private HotelCategory category;
+    private String description;
     private Double rating;
     private String location;
+    private Boolean freeCancellation;
+    private Boolean breakfastIncluded;
+    private Boolean prePayment;
     private PaymentPolicy paymentPolicy;
     private List<String> exteriorImages;
     private List<String> roomImages;
     private List<RoomDto> rooms;  // List of room details
-    private List<UUID> amenityIds;
-
+    private List<AmenityDto> amenities;
+    private int numOfReviews;
+    private String ownerName;
     public String getCategoryDisplayName() {
         return category != null ? category.getDisplayName() : null;
     }

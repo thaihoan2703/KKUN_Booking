@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -26,5 +27,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                                          @Param("checkoutDate") LocalDateTime checkoutDate);
 
     List<Booking> findByCheckoutDateBeforeAndReviewedFalse(LocalDateTime date);
+
+    @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId")
+    List<Booking> findByRoomId(@Param("roomId") UUID roomId);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.room.hotel.id = :hotelId AND b.checkinDate <= :date AND b.checkoutDate > :date")
+    long countByHotelIdAndDate(
+            @Param("hotelId") UUID hotelId,
+            @Param("date") LocalDateTime date
+    );
 }
 

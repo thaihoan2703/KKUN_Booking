@@ -4,12 +4,16 @@ import com.backend.KKUN_Booking.config.payment.VNPayConfig;
 import com.backend.KKUN_Booking.dto.PaymentDto;
 import com.backend.KKUN_Booking.exception.ResourceNotFoundException;
 import com.backend.KKUN_Booking.model.Booking;
+import com.backend.KKUN_Booking.model.Hotel;
 import com.backend.KKUN_Booking.model.Payment;
+import com.backend.KKUN_Booking.model.User;
 import com.backend.KKUN_Booking.model.enumModel.BookingStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentStatus;
 import com.backend.KKUN_Booking.model.enumModel.PaymentType;
 import com.backend.KKUN_Booking.repository.BookingRepository;
+import com.backend.KKUN_Booking.repository.HotelRepository;
 import com.backend.KKUN_Booking.repository.PaymentRepository;
+import com.backend.KKUN_Booking.repository.UserRepository;
 import com.backend.KKUN_Booking.response.PaymentResponse;
 import com.backend.KKUN_Booking.service.BookingService;
 import com.backend.KKUN_Booking.service.NotificationService;
@@ -33,6 +37,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final HotelRepository hotelRepository;
+    private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
 
     private final NotificationService notificationService;
@@ -44,9 +50,11 @@ public class PaymentServiceImpl implements PaymentService {
     private BookingService bookingService;
     @Autowired
     private PaymentService paymentService;
-    public PaymentServiceImpl(PaymentRepository paymentRepository, BookingRepository bookingRepository, VNPayConfig vnPayConfig,NotificationService notificationService ) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, BookingRepository bookingRepository, HotelRepository hotelRepository, UserRepository userRepository, VNPayConfig vnPayConfig, NotificationService notificationService ) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
+        this.hotelRepository = hotelRepository;
+        this.userRepository = userRepository;
         this.vnPayConfig = vnPayConfig;
         this.notificationService =notificationService;
     }
@@ -97,11 +105,36 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
         payment.setStatus(status);
         payment.getBooking().setStatus(BookingStatus.CONFIRMED);
-        payment.getBooking().setCheckoutDate(LocalDateTime.now());
 
         // Lưu lại trang thai thanh toán và booking
         paymentRepository.save(payment);
 
+    }
+
+    @Override
+    public List<PaymentDto> getPaymentsByHotel(UUID hotelId, String userEmail) {
+        // Find the user (for authorization check if needed)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Optional: Check if user is authorized to access the hotel (e.g., only hotel owners/admins can view payments)
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found"));
+
+        // Check if the user is the owner or an admin (authorization)
+        if (!hotel.getOwner().equals(user)) {
+            throw new IllegalStateException("User is not authorized to view payments for this hotel");
+        }
+
+        // Fetch all payments associated with this hotel
+        List<Payment> payments = paymentRepository.findByHotelId(hotelId);
+
+        // Map the list of Payment entities to PaymentDto objects
+        List<PaymentDto> paymentDtos = payments.stream()
+                .map(this::convertToDto)  // Use the convertToDto method
+                .collect(Collectors.toList());
+
+        return paymentDtos;
     }
 
 
@@ -151,14 +184,33 @@ public class PaymentServiceImpl implements PaymentService {
                     .message("This payment has already been processed.")
                     .build();
         }
-        // Fetch booking details using bookingId
-        PaymentProvider provider = paymentProviderFactory.getPaymentProvider(paymentDto.getPaymentType(), request);
-        PaymentResponse.BaseResponse response = provider.initiatePayment(paymentDto);
+        try {
+            // Fetch booking details using bookingId
+            PaymentProvider provider = paymentProviderFactory.getPaymentProvider(paymentDto.getPaymentType(), request);
+            PaymentResponse.BaseResponse response = provider.initiatePayment(paymentDto);
 
-        // Update payment transaction
-        paymentService.updatePayment(paymentDto.getId(),paymentDto);
+            if (response.getCode() == "200") {
+                // Update the payment status to 'initiated' or 'pending'
+                existingPayment.setStatus(PaymentStatus.PENDING);
+                // Update payment transaction
+                paymentService.updatePayment(paymentDto.getId(),paymentDto);
 
-        return response;
+
+                return response;
+            } else {
+                // Handle failure to initiate payment (e.g., provider issues, network errors)
+                return PaymentResponse.BaseResponse.builder()
+                        .code("payment_failed")
+                        .message("Failed to initiate payment. Please try again later.")
+                        .build();
+            }
+        } catch (Exception e) {
+            // Handle any unexpected errors during the payment initiation process
+            return PaymentResponse.BaseResponse.builder()
+                    .code("error")
+                    .message("An error occurred while reinitiating the payment: " + e.getMessage())
+                    .build();
+        }
     }
 
     @Override
@@ -179,12 +231,19 @@ public class PaymentServiceImpl implements PaymentService {
         return response;
     }
 
-    public void processCheckout(UUID paymentId){
+    public void processCheckout(UUID paymentId) {
         try {
             Payment payment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-            if (payment.getBooking().getStatus().equals(BookingStatus.CONFIRMED) && payment.getBooking().isReviewed() == false ) {
-                notificationService.sendReviewReminder(payment.getBooking().getUser(), payment.getBooking());
+
+            // Kiểm tra điều kiện gửi thông báo
+            Booking booking = payment.getBooking();
+            if (booking.getStatus().equals(BookingStatus.CONFIRMED) && !booking.isReviewed()) {
+                User user = booking.getUser();
+                String recipientEmail = (user != null) ? user.getEmail() : booking.getBookingEmail();
+
+                // Gửi thông báo sử dụng recipientEmail
+                notificationService.sendReviewReminder(recipientEmail, booking);
             }
 
         } catch (MessagingException e) {

@@ -12,4 +12,5 @@ public interface RecommendationService {
     List<HotelDto> getPersonalizedRecommendations(UUID userId);
     List<HotelDto> getTopRatingHotels();
     List<HotelDto> getTrendingDestinations();
+    List<HotelDto> getAvailableHotelsForToday();
 }

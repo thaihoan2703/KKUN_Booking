@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -59,12 +60,40 @@ public class WebSecurityConfig {
                 .cors().and()
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/", "/api/**", "/api/auth/**","/api/auth/login","/api/auth/register", "/oauth2/**").permitAll()
-                        .requestMatchers("/admin/**",  "/api/roles/**").hasAnyAuthority(RoleUser.ADMIN.name())
-                        .requestMatchers("/api/hotels**", "/api/rooms/**","/api/payments/**","/api/amenities/**").hasAuthority(RoleUser.HOTELOWNER.name())
-                        .requestMatchers("/api/wishlist/**","/api/bookings/**").hasAuthority(RoleUser.CUSTOMER.name())
-                        .requestMatchers("/@**/settings","/api/users/*/change-password").authenticated()
-                        .anyRequest().authenticated())
+                        // Những route cho phép truy cập chung
+                        .requestMatchers(HttpMethod.GET, "/api/blogs/**", "/api/search/**", "/api/bookings/{id}", "/api/hotels/**", "/api/amenities/**", "/api/rooms/**", "/api/reviews/**", "/api/reviews/rooms/**", "/api/recommendations/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**", "/api/search/**", "/api/recommendations/**", "/api/chat/**").permitAll()
+                        .requestMatchers("/", "/api/auth/**", "/api/auth/google", "/api/auth/login", "/api/auth/register", "/oauth2/**").permitAll()
+
+                        // Cho phép truy cập ẩn danh cho `/api/bookings/create`
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/create","/api/bookings/{id}/payment").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/create","/api/bookings/payment-callback", "/api/promotions/**").permitAll()
+
+                        // Route `/api/users/me` cho phép tất cả vai trò cập nhật thông tin cá nhân
+                        .requestMatchers(HttpMethod.PUT, "/api/users/me").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
+                        .requestMatchers(HttpMethod.POST, "/api/blogs/**", "/api/upload/create").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name(), RoleUser.CUSTOMER.name())
+
+                        // Những route yêu cầu quyền quản trị - ADMIN
+                        .requestMatchers("/admin/**", "/api/roles/**", "/api/hotels", "/api/promotions/**").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/roles/**", "/api/bookings/**").hasAuthority(RoleUser.ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAuthority(RoleUser.ADMIN.name()) // Cho phép ADMIN quản lý mọi người dùng
+
+                        // Những route khác cho RoleUser.HOTELOWNER
+                        .requestMatchers(HttpMethod.POST, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.PUT, "/api/hotels/**", "/api/rooms/**", "/api/payments/**","/api/bookings/**").hasAuthority(RoleUser.HOTELOWNER.name())
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotels/**", "/api/rooms/**", "/api/payments/**").hasAuthority(RoleUser.HOTELOWNER.name())
+
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/{id}").hasAnyAuthority(RoleUser.ADMIN.name(), RoleUser.HOTELOWNER.name())
+                        // Route đặc quyền khách hàng - CUSTOMER
+                        .requestMatchers(HttpMethod.GET, "/api/users/booking-hotel/history").hasAuthority(RoleUser.CUSTOMER.name())
+                        .requestMatchers("/api/wishlist/**").hasAuthority(RoleUser.CUSTOMER.name())
+
+                        // Đảm bảo các quyền còn lại là xác thực
+                        .anyRequest().authenticated()
+                )
+
+
+
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
@@ -75,25 +104,26 @@ public class WebSecurityConfig {
                         .defaultSuccessUrl("/", true)
                         .failureUrl("/login?error")
                         .permitAll())
-                .oauth2Login(oauth2Login ->
-                        oauth2Login
-                                .userInfoEndpoint(userInfoEndpoint ->
-                                        userInfoEndpoint.userService(oAuthService))
-                                .successHandler((request, response, authentication) -> {
-                                    DefaultOidcUser oidcUser = (DefaultOidcUser) authentication.getPrincipal();
-                                    String email = oidcUser.getEmail();
+                .oauth2Login(oauth2Login -> oauth2Login
+                        .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint.userService(oAuthService))
+                        .successHandler((request, response, authentication) -> {
+                            // Lấy thông tin từ OIDC user
+                            DefaultOidcUser oidcUser = (DefaultOidcUser) authentication.getPrincipal();
+                            String email = oidcUser.getEmail();
 
-                                    // Lưu người dùng nếu chưa tồn tại
-                                    User user = userService.findOrSaveOauthUser(email, oidcUser.getFullName());
+                            // Lưu người dùng nếu chưa tồn tại
+                            User user = userService.findOrSaveOauthUser(email, oidcUser.getFullName());
 
-                                    // Tạo JWT token
-                                    Authentication auth = new UsernamePasswordAuthenticationToken(
-                                            user, null, user.getAuthorities());
-                                    String jwtToken = tokenProvider.generateToken(auth);
+                            // Tạo JWT token
+                            Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                            String jwtToken = tokenProvider.generateAccessToken(auth);
 
-                                    // Trả về JWT token trong body hoặc header
-                                    response.addHeader("Authorization", "Bearer " + jwtToken);
-                                })
+                            // Trả về JWT token trong response body
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            String json = String.format("{\"accessToken\": \"%s\"}", jwtToken);
+                            response.getWriter().write(json);
+                        })
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
@@ -136,7 +166,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000"));
+        corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5005/webhooks"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowCredentials(true); // If you need to allow credentials like cookies

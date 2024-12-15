@@ -2,6 +2,9 @@ package com.backend.KKUN_Booking.controller;
 
 import com.backend.KKUN_Booking.dto.HotelDto;
 import com.backend.KKUN_Booking.dto.RoomDto;
+import com.backend.KKUN_Booking.model.enumModel.AmenityType;
+import com.backend.KKUN_Booking.model.enumModel.BedType;
+import com.backend.KKUN_Booking.model.enumModel.RoomType;
 import com.backend.KKUN_Booking.service.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,8 +13,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -57,5 +63,27 @@ public class RoomController {
     public ResponseEntity<Void> deleteRoom(@PathVariable UUID id) {
         roomService.deleteRoom(id);
         return ResponseEntity.noContent().build(); // Trả về 204 No Content khi xóa thành công
+    }
+
+    @GetMapping("hotel/{hotelId}")
+    public ResponseEntity<?> getRoomsByHotelId(@PathVariable UUID hotelId){
+        List<RoomDto> rooms = roomService.getRoomsByHotelId(hotelId);
+        return ResponseEntity.ok(rooms); // Trả về danh sách phòng với trạng thái 200 OK
+    }
+
+    @GetMapping("/room-types")
+    public ResponseEntity<List<Map<String, String>>> getRoomTypes() {
+        List<Map<String, String>> roomTypes = Arrays.stream(RoomType.values())
+                .map(type -> Map.of("value", type.name(), "label", type.getDisplayName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(roomTypes);
+    }
+
+    @GetMapping("/bed-types")
+    public ResponseEntity<List<Map<String, String>>> getBedTypes() {
+        List<Map<String, String>> bedTypes = Arrays.stream(BedType.values())
+                .map(type -> Map.of("value", type.name(), "label", type.getDisplayName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(bedTypes);
     }
 }

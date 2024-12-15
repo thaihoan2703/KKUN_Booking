@@ -8,8 +8,9 @@ import java.util.UUID;
 public interface ReviewService {
     List<ReviewDto> getAllReviews();
     ReviewDto getReviewById(UUID id);
+    List<ReviewDto>  getReviewsByRoomId(UUID roomId);
     ReviewDto createReview(UUID bookingId, ReviewDto reviewDto);
     ReviewDto updateReview(UUID id, ReviewDto reviewDto);
     void deleteReview(UUID id);
-    List<ReviewDto> getReviewsByRoomId(UUID hotelId);
+
 }
