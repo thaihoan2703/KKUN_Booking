@@ -46,7 +46,7 @@ public class Hotel {
 
     private Boolean freeCancellation;
     private Boolean breakfastIncluded;
-    private Boolean prePayment;
+    private Boolean prePayment = false;
 
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Room> rooms = new ArrayList<>();
