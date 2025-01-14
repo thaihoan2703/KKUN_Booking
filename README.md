@@ -10,7 +10,7 @@
   - Spring Boot
 ## Cài đặt
 1. Clone dự án về máy:
-   - git clone https://github.com/thaihoan2703/KKUN_Booking.git
+   - git clone https://github.com/thaihoandev/KKUN_Booking.git
 2. Tạo file local.env
    - Tạo file local.env trên dự án (nằm cạnh các file như: pom.xml, mvnw,...)
    - Nếu sử dụng InteliJ Idea
